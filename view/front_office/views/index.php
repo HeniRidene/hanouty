@@ -144,6 +144,30 @@
                 font-size: 1.5rem;
                 cursor: pointer;
             }
+            .featured-suppliers {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .supplier-widget {
+                width: 100%;
+            }
+            .badge-premium {
+                background-color: #198754;
+                color: white;
+                padding: 0.25rem 0.5rem;
+                border-radius: 0.25rem;
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
+            .badge-secondary {
+                background-color: #e9ecef;
+                color: #6c757d;
+                padding: 0.25rem 0.5rem;
+                border-radius: 0.25rem;
+                font-size: 0.8rem;
+                font-weight: 600;
+            }
         </style>
     </head>
     <body>
@@ -336,6 +360,49 @@
             </div>
         </section>
 
+        <!-- Featured Suppliers Section -->
+        <section class="py-5">
+            <div class="container px-4 px-lg-5">
+                <h2 class="text-center mb-5">Featured Spots</h2>
+                <div class="featured-suppliers">
+                    <?php for ($i = 1; $i <= 10; $i++): ?>
+                        <div class="supplier-widget spot-<?= $i ?>">
+                            <?php if (isset($spots[$i]) && $spots[$i]['supplier_id']): ?>
+                                <?php if ($spots[$i]['product_id']): ?>
+                                    <h3><?= htmlspecialchars($spots[$i]['title']) ?></h3>
+                                    <p><?= htmlspecialchars($spots[$i]['description']) ?></p>
+                                    <span><?= htmlspecialchars($spots[$i]['price']) ?> DT</span>
+                                <?php endif; ?>
+                                <button class="btn" disabled>Spot Owned</button>
+                                <?php if ($userRole === 'supplier' && $supplierId == $spots[$i]['supplier_id']): ?>
+                                    <a href="router.php?action=add-product&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn">Add a Product</a>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <h3>Available Spot #<?= $i ?></h3>
+                                <?php if ($userRole === 'supplier'): ?>
+                                    <a href="#" class="btn buy-spot-btn" data-spot="<?= $i ?>" data-page="<?= $featuredPage ?>">
+                                        Buy this spot <span class="badge-premium"><?= $spotPrices[$i] ?> DT</span>
+                                    </a>
+                                <?php else: ?>
+                                    <span class="badge-secondary">Available</span>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+                    <?php endfor; ?>
+                </div>
+                <!-- Pagination -->
+                <div class="pagination">
+                    <?php for ($p = 1; $p <= $totalPages; $p++): ?>
+                        <?php if ($p == $featuredPage): ?>
+                            <span class="active">Page <?= $p ?></span>
+                        <?php else: ?>
+                            <a href="router.php?featured_page=<?= $p ?>">Page <?= $p ?></a>
+                        <?php endif; ?>
+                    <?php endfor; ?>
+                </div>
+            </div>
+        </section>
+
         <!-- Footer-->
         <footer class="py-5 bg-dark">
             <div class="container">
@@ -395,5 +462,30 @@
                 }
             });
         </script>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.buy-spot-btn').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    var spot = this.getAttribute('data-spot');
+                    var page = this.getAttribute('data-page');
+                    var button = this;
+                    fetch('buy_spot.php?featured_page=' + page + '&spot=' + spot)
+                        .then(response => response.text())
+                        .then(data => {
+                            if (data === 'success') {
+                                button.outerHTML = '<button class="btn" disabled>Spot Owned</button> ' +
+                                    '<a href="router.php?action=add-product&featured_page=' + page + '&spot=' + spot + '" class="btn">Add a Product</a>';
+                            } else if (data === 'spot_taken') {
+                                button.outerHTML = '<button class="btn" disabled>Spot Owned</button>';
+                            }
+                        });
+                });
+            });
+        });
+        </script>
+        
+        <?php // var_dump($spots); // You can use this for debugging if needed ?>
     </body>
 </html> 

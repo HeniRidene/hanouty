@@ -1,6 +1,11 @@
 <?php
 require_once $_SERVER['DOCUMENT_ROOT'] . '/hanouty/auth/config.php';
 
+if (!isset($userRole)) {
+    session_start();
+    $userRole = (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier') ? 'supplier' : null;
+}
+
 class User {
     private $pdo;
 
@@ -312,5 +317,67 @@ class User {
             throw new Exception("Error getting clients: " . $e->getMessage());
         }
     }
+
+    function getFeaturedSuppliers($page) {
+        $now = date('Y-m-d H:i:s');
+        $sql = "SELECT s.*, f.spot_number
+                FROM supplier s
+                JOIN featured_spots f ON s.user_id = f.supplier_id
+                WHERE f.page_number = :page AND f.start_date <= :now AND f.end_date >= :now
+                ORDER BY f.spot_number ASC";
+        // fetch and return
+    }
+
+    function getRegularSuppliers($excludeSupplierIds, $limit) {
+        $sql = "SELECT * FROM supplier WHERE user_id NOT IN (...) LIMIT $limit";
+        // fetch and return
+    }
 }
+
+$spotPrices = [
+    1 => 100, // 1st spot: 100 DT
+    2 => 90,
+    3 => 80,
+    4 => 70,
+    5 => 60,
+    6 => 50,
+    7 => 40,
+    8 => 30,
+    9 => 20,
+    10 => 10
+];
+// For page 2, 3, etc., you can use lower prices.
 ?> 
+
+<style>
+.featured-products {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.product-widget {
+    width: 100%;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 1rem;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    position: relative;
+}
+.badge-premium {
+    background: #ffd700;
+    color: #333;
+    padding: 0.3em 0.7em;
+    border-radius: 5px;
+    font-weight: bold;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+}
+.badge-secondary {
+    background: #eee;
+    color: #888;
+    padding: 0.3em 0.7em;
+    border-radius: 5px;
+}
+</style> 
