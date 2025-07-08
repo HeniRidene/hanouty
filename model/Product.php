@@ -122,5 +122,31 @@ class Product {
             throw new Exception("Error adding product: " . $e->getMessage());
         }
     }
+
+    // Update product
+    public function updateProduct($productId, $data) {
+        try {
+            $fields = [
+                'title' => $data['title'],
+                'description' => $data['description'],
+                'price' => $data['price'],
+                'category' => $data['category']
+            ];
+            $setSql = 'title = :title, description = :description, price = :price, category = :category';
+            if (!empty($data['images'])) {
+                $fields['images'] = $data['images'];
+                $setSql .= ', images = :images';
+            }
+            $sql = "UPDATE products SET $setSql WHERE id = :id";
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($fields as $key => $value) {
+                $stmt->bindValue(":$key", $value);
+            }
+            $stmt->bindValue(':id', $productId);
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            throw new Exception("Error updating product: " . $e->getMessage());
+        }
+    }
 }
 ?> 

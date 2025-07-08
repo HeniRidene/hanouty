@@ -168,6 +168,55 @@
                 font-size: 0.8rem;
                 font-weight: 600;
             }
+            /* Custom Featured Pagination Styles */
+            .custom-featured-pagination .page-item {
+                margin: 0 0.25rem;
+            }
+            .custom-featured-pagination .page-link {
+                border-radius: 1.5rem;
+                box-shadow: 0 2px 8px rgba(25, 135, 84, 0.08);
+                color: #198754;
+                font-weight: 600;
+                background: #fff;
+                border: 1px solid #dee2e6;
+                transition: all 0.2s;
+                padding: 0.5rem 1.25rem;
+            }
+            .custom-featured-pagination .page-item.active .page-link,
+            .custom-featured-pagination .page-link:hover {
+                background: linear-gradient(135deg, #198754 0%, #20c997 100%);
+                color: #fff;
+                border-color: #198754;
+                box-shadow: 0 4px 16px rgba(25, 135, 84, 0.15);
+            }
+            .custom-featured-pagination .page-link:focus {
+                outline: none;
+                box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+            }
+            .featured-spot-product {
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-radius: 1rem;
+                box-shadow: 0 6px 24px rgba(25,135,84,0.08);
+                margin-bottom: 1.5rem;
+            }
+            .featured-spot-product h3 {
+                color: #198754;
+            }
+            .featured-spot-product .carousel-inner {
+                border-radius: 1rem;
+            }
+            .featured-spot-product .btn-warning {
+                background: linear-gradient(135deg, #ffc107 0%, #ffecb3 100%);
+                color: #212529;
+                border: none;
+                font-weight: 600;
+                box-shadow: 0 2px 8px rgba(255,193,7,0.08);
+                transition: background 0.2s;
+            }
+            .featured-spot-product .btn-warning:hover {
+                background: linear-gradient(135deg, #ffb300 0%, #ffe082 100%);
+                color: #212529;
+            }
         </style>
     </head>
     <body>
@@ -276,6 +325,7 @@
         <?php endif; ?>
 
         <!-- Suppliers Section -->
+        <?php if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'supplier'): ?>
         <section class="py-5" id="suppliers">
             <div class="container px-4 px-lg-5">
                 <h2 class="text-center mb-5">Our Verified Suppliers</h2>
@@ -359,8 +409,10 @@
                 <?php endif; ?>
             </div>
         </section>
+        <?php endif; ?>
 
         <!-- Featured Suppliers Section -->
+        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier'): ?>
         <section class="py-5">
             <div class="container px-4 px-lg-5">
                 <h2 class="text-center mb-5">Featured Spots</h2>
@@ -369,13 +421,54 @@
                         <div class="supplier-widget spot-<?= $i ?>">
                             <?php if (isset($spots[$i]) && $spots[$i]['supplier_id']): ?>
                                 <?php if ($spots[$i]['product_id']): ?>
-                                    <h3><?= htmlspecialchars($spots[$i]['title']) ?></h3>
-                                    <p><?= htmlspecialchars($spots[$i]['description']) ?></p>
-                                    <span><?= htmlspecialchars($spots[$i]['price']) ?> DT</span>
-                                <?php endif; ?>
-                                <button class="btn" disabled>Spot Owned</button>
-                                <?php if ($userRole === 'supplier' && $supplierId == $spots[$i]['supplier_id']): ?>
-                                    <a href="router.php?action=add-product&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn">Add a Product</a>
+                                    <?php 
+                                    $productImages = [];
+                                    if (!empty($spots[$i]['images'])) {
+                                        $productImages = json_decode($spots[$i]['images'], true);
+                                    }
+                                    ?>
+                                    <div class="featured-spot-product p-4 d-flex flex-column flex-md-row align-items-center gap-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 1rem; box-shadow: 0 6px 24px rgba(25,135,84,0.08);">
+                                        <?php if (!empty($productImages)): ?>
+                                            <div id="spot-carousel-<?= $i ?>" class="carousel slide flex-shrink-0" data-bs-ride="carousel" style="width: 340px; max-width: 100%;">
+                                                <div class="carousel-inner rounded-3 shadow">
+                                                    <?php foreach ($productImages as $imgIdx => $img): ?>
+                                                        <div class="carousel-item<?= $imgIdx === 0 ? ' active' : '' ?>">
+                                                            <img src="<?= htmlspecialchars($img) ?>" class="d-block w-100" style="height: 260px; object-fit: cover; border-radius: 1rem;" alt="Product Image <?= $imgIdx + 1 ?>">
+                                                        </div>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                                <?php if (count($productImages) > 1): ?>
+                                                    <button class="carousel-control-prev" type="button" data-bs-target="#spot-carousel-<?= $i ?>" data-bs-slide="prev">
+                                                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                        <span class="visually-hidden">Previous</span>
+                                                    </button>
+                                                    <button class="carousel-control-next" type="button" data-bs-target="#spot-carousel-<?= $i ?>" data-bs-slide="next">
+                                                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                        <span class="visually-hidden">Next</span>
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <div class="flex-grow-1">
+                                            <h3 class="fw-bold mb-2" style="font-size: 2rem; color: #198754; letter-spacing: -1px;"><?= htmlspecialchars($spots[$i]['title']) ?></h3>
+                                            <p class="mb-2" style="font-size: 1.1rem; color: #444;"><?= htmlspecialchars($spots[$i]['description']) ?></p>
+                                            <div class="d-flex align-items-center mb-3">
+                                                <span class="fs-4 fw-bold text-success me-3"><?= htmlspecialchars(number_format($spots[$i]['price'], 2)) ?> DT</span>
+                                            </div>
+                                            <?php if ($userRole === 'supplier' && $supplierId == $spots[$i]['supplier_id']): ?>
+                                                <a href="router.php?action=edit-product&id=<?= $spots[$i]['product_id'] ?>&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-warning px-4 py-2 fw-bold">Modify Offer</a>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <h3>Available Spot #<?= $i ?></h3>
+                                    <?php if ($userRole === 'supplier'): ?>
+                                        <a href="#" class="btn buy-spot-btn" data-spot="<?= $i ?>" data-page="<?= $featuredPage ?>">
+                                            Buy this spot <span class="badge-premium"><?= $spotPrices[$i] ?> DT</span>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="badge-secondary">Available</span>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             <?php else: ?>
                                 <h3>Available Spot #<?= $i ?></h3>
@@ -391,17 +484,23 @@
                     <?php endfor; ?>
                 </div>
                 <!-- Pagination -->
-                <div class="pagination">
-                    <?php for ($p = 1; $p <= $totalPages; $p++): ?>
-                        <?php if ($p == $featuredPage): ?>
-                            <span class="active">Page <?= $p ?></span>
-                        <?php else: ?>
-                            <a href="router.php?featured_page=<?= $p ?>">Page <?= $p ?></a>
-                        <?php endif; ?>
-                    <?php endfor; ?>
-                </div>
+                <nav aria-label="Featured spots pagination" class="mt-4">
+                    <ul class="pagination justify-content-center custom-featured-pagination">
+                        <?php for (
+                            $p = 1; $p <= $totalPages; $p++): ?>
+                            <li class="page-item<?= $p == $featuredPage ? ' active' : '' ?>">
+                                <?php if ($p == $featuredPage): ?>
+                                    <span class="page-link">Page <?= $p ?></span>
+                                <?php else: ?>
+                                    <a class="page-link" href="router.php?featured_page=<?= $p ?>">Page <?= $p ?></a>
+                                <?php endif; ?>
+                            </li>
+                        <?php endfor; ?>
+                    </ul>
+                </nav>
             </div>
         </section>
+        <?php endif; ?>
 
         <!-- Footer-->
         <footer class="py-5 bg-dark">
@@ -486,6 +585,8 @@
         });
         </script>
         
-        <?php // var_dump($spots); // You can use this for debugging if needed ?>
+        <?php if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        } ?>
     </body>
 </html> 

@@ -250,5 +250,57 @@ class FrontController {
             return ['error' => 'An error occurred while adding the product: ' . $e->getMessage()];
         }
     }
+    
+    // Update product
+    public function updateProduct($productId, $data, $files) {
+        try {
+            // Validate required fields
+            if (empty($data['title']) || empty($data['description']) || empty($data['price'])) {
+                return ['error' => 'Please fill in all required fields.'];
+            }
+            if (!is_numeric($data['price']) || $data['price'] <= 0) {
+                return ['error' => 'Please enter a valid price.'];
+            }
+            // Handle image uploads (optional, can replace or keep old images)
+            $uploadedImages = [];
+            if (!empty($files['images']['name'][0])) {
+                $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/hanouty/uploads/products/';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                foreach ($files['images']['tmp_name'] as $key => $tmpName) {
+                    if ($files['images']['error'][$key] === UPLOAD_ERR_OK) {
+                        $fileName = $files['images']['name'][$key];
+                        $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                        $allowedTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                        if (!in_array($fileExtension, $allowedTypes)) {
+                            return ['error' => 'Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.'];
+                        }
+                        $uniqueName = uniqid() . '_' . time() . '.' . $fileExtension;
+                        $filePath = $uploadDir . $uniqueName;
+                        if (move_uploaded_file($tmpName, $filePath)) {
+                            $uploadedImages[] = '/hanouty/uploads/products/' . $uniqueName;
+                        }
+                    }
+                }
+            }
+            // Prepare update data
+            $updateData = [
+                'title' => trim($data['title']),
+                'description' => trim($data['description']),
+                'price' => (float)$data['price'],
+                'category' => trim($data['category'] ?? ''),
+                'images' => !empty($uploadedImages) ? json_encode($uploadedImages) : null
+            ];
+            $result = $this->productModel->updateProduct($productId, $updateData);
+            if ($result) {
+                return ['success' => 'Product updated successfully!'];
+            } else {
+                return ['error' => 'Failed to update product. Please try again.'];
+            }
+        } catch (Exception $e) {
+            return ['error' => 'An error occurred while updating the product: ' . $e->getMessage()];
+        }
+    }
 }
 ?> 

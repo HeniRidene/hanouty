@@ -84,11 +84,62 @@ switch ($action) {
             $result = $controller->addProduct($_POST, $_FILES);
             if (isset($result['success'])) {
                 $addProductSuccess = $result['success'];
+                // Assign product to featured spot if info is present
+                if (!empty($_POST['featured_page']) && !empty($_POST['spot'])) {
+                    // Get the last inserted product ID for this supplier
+                    $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
+                    $supplierId = $_SESSION['user_id'];
+                    $productRes = $mysqli->query("SELECT id FROM products WHERE user_id = '" . $supplierId . "' ORDER BY created_at DESC, id DESC LIMIT 1");
+                    if ($productRow = $productRes->fetch_assoc()) {
+                        $productId = $productRow['id'];
+                        $featuredPage = (int)$_POST['featured_page'];
+                        $spot = (int)$_POST['spot'];
+                        // Update featured_spots table
+                        $updateStmt = $mysqli->prepare('UPDATE featured_spots SET product_id = ? WHERE page_number = ? AND spot_number = ? AND supplier_id = ?');
+                        $updateStmt->bind_param('iiii', $productId, $featuredPage, $spot, $supplierId);
+                        $updateStmt->execute();
+                        $updateStmt->close();
+                    }
+                    // Redirect to the featured page after adding product
+                    header('Location: router.php?featured_page=' . urlencode($featuredPage));
+                    exit;
+                }
             } else {
                 $addProductError = $result['error'];
             }
         }
         include 'views/add-product.php';
+        break;
+        
+    case 'edit-product':
+        // Only suppliers can edit their own products
+        if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'supplier') {
+            header('Location: router.php');
+            exit;
+        }
+        $productId = $_GET['id'] ?? null;
+        $featuredPage = $_GET['featured_page'] ?? 1;
+        $spot = $_GET['spot'] ?? null;
+        if (!$productId) {
+            header('Location: router.php');
+            exit;
+        }
+        $product = $controller->getProduct($productId);
+        if (!$product || $product['user_id'] != $_SESSION['user_id']) {
+            header('Location: router.php');
+            exit;
+        }
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $result = $controller->updateProduct($productId, $_POST, $_FILES);
+            if (isset($result['success'])) {
+                // Redirect back to the featured page/spot
+                header('Location: router.php?featured_page=' . urlencode($featuredPage));
+                exit;
+            } else {
+                $editProductError = $result['error'];
+            }
+        }
+        include 'views/edit-product.php';
         break;
         
     default:
@@ -107,11 +158,12 @@ switch ($action) {
         // --- Pagination: count total pages ---
         $res = $mysqli->query('SELECT MAX(page_number) as max_page FROM featured_spots');
         $row = $res->fetch_assoc();
-        $totalPages = max(1, (int)($row['max_page'] ?? 1));
+        $minPages = 3;
+        $totalPages = max($minPages, (int)($row['max_page'] ?? 1));
 
         // --- Fetch all spots for this page ---
         $spots = [];
-        $stmt = $mysqli->prepare('SELECT fs.spot_number, fs.supplier_id, fs.product_id, p.title, p.description, p.price FROM featured_spots fs LEFT JOIN products p ON fs.product_id = p.id WHERE fs.page_number = ?');
+        $stmt = $mysqli->prepare('SELECT fs.spot_number, fs.supplier_id, fs.product_id, p.title, p.description, p.price, p.images FROM featured_spots fs LEFT JOIN products p ON fs.product_id = p.id WHERE fs.page_number = ?');
         $stmt->bind_param('i', $featuredPage);
         $stmt->execute();
         $result = $stmt->get_result();

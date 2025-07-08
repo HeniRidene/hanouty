@@ -2,7 +2,9 @@
 require_once $_SERVER['DOCUMENT_ROOT'] . '/hanouty/auth/config.php';
 
 if (!isset($userRole)) {
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     $userRole = (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier') ? 'supplier' : null;
 }
 
