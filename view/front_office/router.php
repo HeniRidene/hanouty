@@ -142,6 +142,44 @@ switch ($action) {
         include 'views/edit-product.php';
         break;
         
+    case 'profile':
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: router.php');
+            exit;
+        }
+        $user = [
+            'id' => $_SESSION['user_id'],
+            'name' => $_SESSION['user_name'] ?? '',
+            'email' => $_SESSION['user_email'] ?? '',
+            'role' => $_SESSION['user_role'] ?? '',
+        ];
+        include 'views/profile.php';
+        break;
+        
+    case 'common-products':
+        // DB connection
+        $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
+        if ($mysqli->connect_errno) {
+            die('Database connection failed: ' . $mysqli->connect_error);
+        }
+        $now = date('Y-m-d H:i:s');
+        // Get all product IDs currently in an active spot
+        $activeSpotProductIds = [];
+        $res = $mysqli->query("SELECT product_id FROM featured_spots WHERE end_date > '$now' AND product_id IS NOT NULL");
+        while ($row = $res->fetch_assoc()) {
+            $activeSpotProductIds[] = (int)$row['product_id'];
+        }
+        // Get all products not in an active spot, join users for supplier name
+        $idsStr = $activeSpotProductIds ? implode(',', $activeSpotProductIds) : '0';
+        $products = [];
+        $sql = "SELECT p.*, u.name AS supplier_name FROM products p LEFT JOIN users u ON p.user_id = u.id WHERE p.id NOT IN ($idsStr) ORDER BY p.created_at DESC";
+        $res = $mysqli->query($sql);
+        while ($row = $res->fetch_assoc()) {
+            $products[] = $row;
+        }
+        include 'views/common-products.php';
+        break;
+        
     default:
         // --- DB CONNECTION ---
         $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
@@ -163,12 +201,22 @@ switch ($action) {
 
         // --- Fetch all spots for this page ---
         $spots = [];
-        $stmt = $mysqli->prepare('SELECT fs.spot_number, fs.supplier_id, fs.product_id, p.title, p.description, p.price, p.images FROM featured_spots fs LEFT JOIN products p ON fs.product_id = p.id WHERE fs.page_number = ?');
+        $now = date('Y-m-d H:i:s');
+        $stmt = $mysqli->prepare('SELECT fs.spot_number, fs.supplier_id, fs.product_id, fs.end_date, p.title, p.description, p.price, p.images FROM featured_spots fs LEFT JOIN products p ON fs.product_id = p.id WHERE fs.page_number = ? ORDER BY fs.spot_number, fs.end_date DESC');
         $stmt->bind_param('i', $featuredPage);
         $stmt->execute();
         $result = $stmt->get_result();
+        $seen = [];
         while ($row = $result->fetch_assoc()) {
-            $spots[(int)$row['spot_number']] = $row;
+            $spotNum = (int)$row['spot_number'];
+            // Only take the latest (by end_date) for each spot_number
+            if (!isset($seen[$spotNum])) {
+                // If end_date is in the past, treat as available
+                if (empty($row['end_date']) || $row['end_date'] > $now) {
+                    $spots[$spotNum] = $row;
+                }
+                $seen[$spotNum] = true;
+            }
         }
         $stmt->close();
         

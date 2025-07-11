@@ -38,21 +38,23 @@ if ($stmt->num_rows === 0) {
     $stmt->close();
 }
 
-// Check if spot is already taken
-$stmt = $mysqli->prepare('SELECT id FROM featured_spots WHERE page_number = ? AND spot_number = ?');
+// Check if spot is already taken (not expired)
+$stmt = $mysqli->prepare('SELECT end_date FROM featured_spots WHERE page_number = ? AND spot_number = ? ORDER BY end_date DESC LIMIT 1');
 $stmt->bind_param('ii', $featuredPage, $spot);
 $stmt->execute();
-$stmt->store_result();
-if ($stmt->num_rows > 0) {
-    $stmt->close();
-    echo 'spot_taken';
-    exit;
+$stmt->bind_result($endDate);
+if ($stmt->fetch()) {
+    if (!empty($endDate) && $endDate > date('Y-m-d H:i:s')) {
+        $stmt->close();
+        echo 'spot_taken';
+        exit;
+    }
 }
 $stmt->close();
 
 // Insert new spot ownership
 $now = date('Y-m-d H:i:s');
-$expiry = date('Y-m-d H:i:s', strtotime('+2 minutes'));
+$expiry = date('Y-m-d H:i:s', strtotime('3 days'));
 $pricePaid = $spotPrices[$spot] ?? 0;
 $stmt = $mysqli->prepare('INSERT INTO featured_spots (supplier_id, page_number, spot_number, start_date, end_date, price_paid) VALUES (?, ?, ?, ?, ?, ?)');
 $stmt->bind_param('iiissd', $supplierId, $featuredPage, $spot, $now, $expiry, $pricePaid);

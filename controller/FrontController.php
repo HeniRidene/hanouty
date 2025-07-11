@@ -23,10 +23,12 @@ class FrontController {
                 $_SESSION['user_email'] = $user['email'];
                 
                 // Redirect based on role
-                if ($user['role'] === 'admin' || $user['role'] === 'supplier') {
+                if ($user['role'] === 'admin') {
                     return ['redirect' => '../back_office/index.php'];
+                } elseif ($user['role'] === 'supplier' || $user['role'] === 'client') {
+                    return ['redirect' => '/hanouty/view/front_office/router.php'];
                 } else {
-                    return ['redirect' => 'index.php'];
+                    return ['redirect' => '/hanouty/view/front_office/router.php'];
                 }
             } else {
                 return ['error' => 'Invalid email or password'];
@@ -39,7 +41,7 @@ class FrontController {
     // Handle logout
     public function logout() {
         session_destroy();
-        return ['redirect' => 'index.php'];
+        return ['redirect' => '/hanouty/view/front_office/router.php'];
     }
     
     // Handle registration

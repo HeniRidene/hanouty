@@ -223,7 +223,7 @@
         <!-- Navigation-->
         <nav class="navbar navbar-expand-lg navbar-light bg-light">
             <div class="container px-4 px-lg-5">
-                <a class="navbar-brand" href="router.php">
+                <a class="navbar-brand" href="/hanouty/view/front_office/router.php">
                     <strong>Hanouty</strong>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -232,20 +232,23 @@
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
                         <li class="nav-item">
-                            <a class="nav-link active" aria-current="page" href="router.php">Home</a>
+                            <a class="nav-link active" aria-current="page" href="/hanouty/view/front_office/router.php">Home</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#suppliers">Suppliers</a>
+                            <a class="nav-link" href="#suppliers">Products</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/hanouty/view/front_office/router.php?action=common-products">Common Products</a>
                         </li>
                         <?php if (isset($_SESSION['user_id'])): ?>
                             <li class="nav-item">
-                                <a class="nav-link" href="profile.php">Profile</a>
+                                <a class="nav-link" href="/hanouty/view/front_office/router.php?action=profile">Profile</a>
                             </li>
                         <?php endif; ?>
                     </ul>
                     
                     <!-- Search Form -->
-                    <form class="d-flex me-3" method="GET" action="router.php">
+                    <form class="d-flex me-3" method="GET" action="/hanouty/view/front_office/router.php">
                         <input class="form-control me-2" type="search" name="search" placeholder="Search products..." value="<?= htmlspecialchars($searchTerm) ?>">
                         <button class="btn btn-outline-dark" type="submit">Search</button>
                     </form>
@@ -253,12 +256,7 @@
                     <!-- User Menu -->
                     <div class="d-flex">
                         <?php if (isset($_SESSION['user_id'])): ?>
-                            <?php if ($_SESSION['user_role'] === 'supplier'): ?>
-                                <a href="router.php?action=add-product" class="btn btn-success me-2">
-                                    <i class="bi-plus-circle me-1"></i>
-                                    Add Product
-                                </a>
-                            <?php endif; ?>
+                            <!-- No Add Product or 10 DT button in navbar -->
                             <div class="dropdown">
                                 <button class="btn btn-outline-dark dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi-person-fill me-1"></i>
@@ -270,14 +268,14 @@
                                         <li><a class="dropdown-item" href="../back_office/index.php">Dashboard</a></li>
                                     <?php endif; ?>
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="router.php?action=logout">Logout</a></li>
+                                    <li><a class="dropdown-item" href="/hanouty/view/front_office/router.php?action=logout">Logout</a></li>
                                 </ul>
                             </div>
                         <?php else: ?>
                             <button class="btn btn-outline-dark" type="button" onclick="showLoginModal()">
                                 <i class="bi-person-fill me-1"></i>
                                 Login
-                            </button>
+                            </button>   
                         <?php endif; ?>
                     </div>
                 </div>
@@ -285,7 +283,7 @@
         </nav>
 
         <!-- Header-->
-        <header class="bg-dark py-5">
+        <header class="bg-dark py-5" style="margin-bottom: 3rem;">
             <div class="container px-4 px-lg-5 my-5">
                 <div class="text-center text-white">
                     <h1 class="display-4 fw-bolder">Discover Amazing Products</h1>
@@ -293,6 +291,9 @@
                 </div>
             </div>
         </header>
+
+        <!-- Add extra spacing before Featured Spots section -->
+        <div style="height: 40px;"></div>
 
         <!-- Search Results Section -->
         <?php if ($searchTerm && !empty($searchResults)): ?>
@@ -328,7 +329,7 @@
         <?php if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'supplier'): ?>
         <section class="py-5" id="suppliers">
             <div class="container px-4 px-lg-5">
-                <h2 class="text-center mb-5">Our Verified Suppliers</h2>
+                <h2 class="text-center mb-5">Our products</h2>
                 
                 <?php if (empty($suppliers)): ?>
                     <div class="text-center">
@@ -450,7 +451,10 @@
                                             </div>
                                         <?php endif; ?>
                                         <div class="flex-grow-1">
-                                            <h3 class="fw-bold mb-2" style="font-size: 2rem; color: #198754; letter-spacing: -1px;"><?= htmlspecialchars($spots[$i]['title']) ?></h3>
+                                            <h3 class="fw-bold mb-2" style="font-size: 2rem; color: #198754; letter-spacing: -1px;">
+                                                <?= htmlspecialchars($spots[$i]['title']) ?> 
+                                                <span class="badge-premium ms-2"><?= $spotPrices[$i] ?> DT</span>
+                                            </h3>
                                             <p class="mb-2" style="font-size: 1.1rem; color: #444;"><?= htmlspecialchars($spots[$i]['description']) ?></p>
                                             <div class="d-flex align-items-center mb-3">
                                                 <span class="fs-4 fw-bold text-success me-3"><?= htmlspecialchars(number_format($spots[$i]['price'], 2)) ?> DT</span>
@@ -461,20 +465,25 @@
                                         </div>
                                     </div>
                                 <?php else: ?>
-                                    <h3>Available Spot #<?= $i ?></h3>
-                                    <?php if ($userRole === 'supplier'): ?>
+                                    <h3>Spot n°<?= $i ?> <span class="badge-premium ms-2"><?= $spotPrices[$i] ?> DT</span></h3>
+                                    <?php if ($userRole === 'supplier' && isset($spots[$i]['supplier_id']) && $spots[$i]['supplier_id'] == $supplierId && empty($spots[$i]['product_id'])): ?>
+                                        <button class="btn" disabled>Spot Owned</button>
+                                        <a href="router.php?action=add-product&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-success ms-2">Add Product</a>
+                                    <?php elseif ($userRole === 'supplier' && isset($spots[$i]['supplier_id']) && $spots[$i]['supplier_id'] != $supplierId): ?>
+                                        <button class="btn btn-secondary" disabled>Can't purchase this spot</button>
+                                    <?php elseif ($userRole === 'supplier'): ?>
                                         <a href="#" class="btn buy-spot-btn" data-spot="<?= $i ?>" data-page="<?= $featuredPage ?>">
-                                            Buy this spot <span class="badge-premium"><?= $spotPrices[$i] ?> DT</span>
+                                            Buy this spot
                                         </a>
                                     <?php else: ?>
                                         <span class="badge-secondary">Available</span>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <h3>Available Spot #<?= $i ?></h3>
+                                <h3>Spot n°<?= $i ?> <span class="badge-premium ms-2"><?= $spotPrices[$i] ?> DT</span></h3>
                                 <?php if ($userRole === 'supplier'): ?>
                                     <a href="#" class="btn buy-spot-btn" data-spot="<?= $i ?>" data-page="<?= $featuredPage ?>">
-                                        Buy this spot <span class="badge-premium"><?= $spotPrices[$i] ?> DT</span>
+                                        Buy this spot
                                     </a>
                                 <?php else: ?>
                                     <span class="badge-secondary">Available</span>
@@ -520,7 +529,7 @@
                     <div class="alert alert-danger"><?= htmlspecialchars($loginError) ?></div>
                 <?php endif; ?>
                 
-                <form method="POST" action="router.php?action=login">
+                <form method="POST" action="/hanouty/view/front_office/router.php?action=login">
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
                         <input type="email" class="form-control" id="email" name="email" required>
@@ -535,7 +544,7 @@
                 </form>
                 
                 <div class="text-center mt-3">
-                    <p class="mb-0">Don't have an account? <a href="router.php?action=register">Register here</a></p>
+                    <p class="mb-0">Don't have an account? <a href="/hanouty/view/front_office/router.php?action=register">Register here</a></p>
                 </div>
             </div>
         </div>
@@ -574,8 +583,24 @@
                         .then(response => response.text())
                         .then(data => {
                             if (data === 'success') {
-                                button.outerHTML = '<button class="btn" disabled>Spot Owned</button> ' +
-                                    '<a href="router.php?action=add-product&featured_page=' + page + '&spot=' + spot + '" class="btn">Add a Product</a>';
+                                // Create a wrapper div for the new buttons
+                                var wrapper = document.createElement('div');
+                                wrapper.style.display = 'inline-block';
+                                // Spot Owned button
+                                var ownedBtn = document.createElement('button');
+                                ownedBtn.className = 'btn';
+                                ownedBtn.disabled = true;
+                                ownedBtn.textContent = 'Spot Owned';
+                                // Add Product button
+                                var addBtn = document.createElement('a');
+                                addBtn.href = 'router.php?action=add-product&featured_page=' + page + '&spot=' + spot;
+                                addBtn.className = 'btn btn-success ms-2';
+                                addBtn.textContent = 'Add Product';
+                                // Add both to wrapper
+                                wrapper.appendChild(ownedBtn);
+                                wrapper.appendChild(addBtn);
+                                // Replace the original button with the wrapper
+                                button.parentNode.replaceChild(wrapper, button);
                             } else if (data === 'spot_taken') {
                                 button.outerHTML = '<button class="btn" disabled>Spot Owned</button>';
                             }
