@@ -102,8 +102,8 @@ class Product {
     // Add new product
     public function addProduct($data) {
         try {
-            $sql = "INSERT INTO products (title, description, price, category, images, user_id, status, created_at) 
-                    VALUES (:title, :description, :price, :category, :images, :user_id, 'active', NOW())";
+            $sql = "INSERT INTO products (title, description, price, category, images, user_id, is_flash_sale, status, created_at) 
+                    VALUES (:title, :description, :price, :category, :images, :user_id, :is_flash_sale, 'active', NOW())";
             $stmt = $this->pdo->prepare($sql);
             $stmt->bindParam(':title', $data['title']);
             $stmt->bindParam(':description', $data['description']);
@@ -111,6 +111,7 @@ class Product {
             $stmt->bindParam(':category', $data['category']);
             $stmt->bindParam(':images', $data['images']);
             $stmt->bindParam(':user_id', $data['supplier_id']);
+            $stmt->bindParam(':is_flash_sale', $data['is_flash_sale']);
             
             $result = $stmt->execute();
             if (!$result) {
@@ -130,9 +131,10 @@ class Product {
                 'title' => $data['title'],
                 'description' => $data['description'],
                 'price' => $data['price'],
-                'category' => $data['category']
+                'category' => $data['category'],
+                'is_flash_sale' => $data['is_flash_sale']
             ];
-            $setSql = 'title = :title, description = :description, price = :price, category = :category';
+            $setSql = 'title = :title, description = :description, price = :price, category = :category, is_flash_sale = :is_flash_sale';
             if (!empty($data['images'])) {
                 $fields['images'] = $data['images'];
                 $setSql .= ', images = :images';

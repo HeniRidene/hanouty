@@ -168,6 +168,10 @@
                                             <option value="Other" <?= ($_POST['category'] ?? '') === 'Other' ? 'selected' : '' ?>>Other</option>
                                         </select>
                                     </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="is_flash_sale" name="is_flash_sale" value="1" <?= isset($_POST['is_flash_sale']) ? 'checked' : '' ?>>
+                                        <label class="form-check-label" for="is_flash_sale">Add to Flash Sale</label>
+                                    </div>
                                 </div>
                             </div>
                         </div>

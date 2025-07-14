@@ -238,6 +238,7 @@ class FrontController {
             ];
             
             // Add product to database
+            $productData['is_flash_sale'] = isset($data['is_flash_sale']) ? 1 : 0;
             $result = $this->productModel->addProduct($productData);
             
             if ($result) {
@@ -294,6 +295,7 @@ class FrontController {
                 'category' => trim($data['category'] ?? ''),
                 'images' => !empty($uploadedImages) ? json_encode($uploadedImages) : null
             ];
+            $updateData['is_flash_sale'] = isset($data['is_flash_sale']) ? 1 : 0;
             $result = $this->productModel->updateProduct($productId, $updateData);
             if ($result) {
                 return ['success' => 'Product updated successfully!'];

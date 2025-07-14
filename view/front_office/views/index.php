@@ -217,33 +217,27 @@
                 background: linear-gradient(135deg, #ffb300 0%, #ffe082 100%);
                 color: #212529;
             }
+            .navbar .nav-link:hover { color: #fff !important; text-decoration: underline; }
+            .navbar .btn-outline-dark { border-color: #fff; color: #fff; }
+            .navbar .btn-outline-dark:hover { background: #fff; color: #198754; }
         </style>
     </head>
     <body>
         <!-- Navigation-->
-        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <nav class="navbar navbar-expand-lg navbar-light" style="background: linear-gradient(135deg, #198754 0%, #20c997 100%); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             <div class="container px-4 px-lg-5">
-                <a class="navbar-brand" href="/hanouty/view/front_office/router.php">
-                    <strong>Hanouty</strong>
-                </a>
+                <a class="navbar-brand text-white" href="/hanouty/view/front_office/router.php"><strong>Hanouty</strong></a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
-                        <li class="nav-item">
-                            <a class="nav-link active" aria-current="page" href="/hanouty/view/front_office/router.php">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#suppliers">Products</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/hanouty/view/front_office/router.php?action=common-products">Common Products</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link text-white" aria-current="page" href="/hanouty/view/front_office/router.php">Home</a></li>
+                        <li class="nav-item"><a class="nav-link text-white" href="#suppliers">Products</a></li>
+                        <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=common-products">Common Products</a></li>
+                        <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=flash-sale">Flash Sale</a></li>
                         <?php if (isset($_SESSION['user_id'])): ?>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/hanouty/view/front_office/router.php?action=profile">Profile</a>
-                            </li>
+                            <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=profile">Profile</a></li>
                         <?php endif; ?>
                     </ul>
                     
@@ -453,7 +447,7 @@
                                         <div class="flex-grow-1">
                                             <h3 class="fw-bold mb-2" style="font-size: 2rem; color: #198754; letter-spacing: -1px;">
                                                 <?= htmlspecialchars($spots[$i]['title']) ?> 
-                                                <span class="badge-premium ms-2"><?= $spotPrices[$i] ?> DT</span>
+                                                <!-- No price badge for owned spots with product -->
                                             </h3>
                                             <p class="mb-2" style="font-size: 1.1rem; color: #444;"><?= htmlspecialchars($spots[$i]['description']) ?></p>
                                             <div class="d-flex align-items-center mb-3">
@@ -465,25 +459,21 @@
                                         </div>
                                     </div>
                                 <?php else: ?>
-                                    <h3>Spot n°<?= $i ?> <span class="badge-premium ms-2"><?= $spotPrices[$i] ?> DT</span></h3>
+                                    <h3>Spot n°<?= $i ?></h3>
                                     <?php if ($userRole === 'supplier' && isset($spots[$i]['supplier_id']) && $spots[$i]['supplier_id'] == $supplierId && empty($spots[$i]['product_id'])): ?>
                                         <button class="btn" disabled>Spot Owned</button>
                                         <a href="router.php?action=add-product&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-success ms-2">Add Product</a>
                                     <?php elseif ($userRole === 'supplier' && isset($spots[$i]['supplier_id']) && $spots[$i]['supplier_id'] != $supplierId): ?>
                                         <button class="btn btn-secondary" disabled>Can't purchase this spot</button>
-                                    <?php elseif ($userRole === 'supplier'): ?>
-                                        <a href="#" class="btn buy-spot-btn" data-spot="<?= $i ?>" data-page="<?= $featuredPage ?>">
-                                            Buy this spot
-                                        </a>
                                     <?php else: ?>
                                         <span class="badge-secondary">Available</span>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <h3>Spot n°<?= $i ?> <span class="badge-premium ms-2"><?= $spotPrices[$i] ?> DT</span></h3>
+                                <h3>Spot n°<?= $i ?></h3>
                                 <?php if ($userRole === 'supplier'): ?>
                                     <a href="#" class="btn buy-spot-btn" data-spot="<?= $i ?>" data-page="<?= $featuredPage ?>">
-                                        Buy this spot
+                                        Buy this spot for <?= $spotPrices[$i] ?> DT
                                     </a>
                                 <?php else: ?>
                                     <span class="badge-secondary">Available</span>

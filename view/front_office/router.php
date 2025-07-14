@@ -180,6 +180,17 @@ switch ($action) {
         include 'views/common-products.php';
         break;
         
+    case 'flash-sale':
+        // Fetch flash sale products (assuming products have an 'is_flash_sale' flag or join with a flash_sales table)
+        $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
+        $flashProducts = [];
+        $res = $mysqli->query("SELECT * FROM products WHERE is_flash_sale = 1 ORDER BY created_at DESC");
+        while ($row = $res->fetch_assoc()) {
+            $flashProducts[] = $row;
+        }
+        include 'views/flash-sale.php';
+        break;
+        
     default:
         // --- DB CONNECTION ---
         $mysqli = new mysqli('localhost', 'root', '', 'hanouty');

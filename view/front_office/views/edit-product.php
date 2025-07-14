@@ -146,6 +146,10 @@
                                             <option value="Other" <?= (($_POST['category'] ?? $product['category']) === 'Other') ? 'selected' : '' ?>>Other</option>
                                         </select>
                                     </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="is_flash_sale" name="is_flash_sale" value="1" <?= (isset($_POST['is_flash_sale']) || ($product['is_flash_sale'] ?? 0) == 1) ? 'checked' : '' ?>>
+                                        <label class="form-check-label" for="is_flash_sale">Add to Flash Sale</label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
