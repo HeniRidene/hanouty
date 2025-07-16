@@ -172,7 +172,7 @@ switch ($action) {
         // Get all products not in an active spot, join users for supplier name
         $idsStr = $activeSpotProductIds ? implode(',', $activeSpotProductIds) : '0';
         $products = [];
-        $sql = "SELECT p.*, u.name AS supplier_name FROM products p LEFT JOIN users u ON p.user_id = u.id WHERE p.id NOT IN ($idsStr) ORDER BY p.created_at DESC";
+        $sql = "SELECT p.*, u.name AS supplier_name FROM products p LEFT JOIN users u ON p.user_id = u.id WHERE p.id NOT IN ($idsStr) AND p.is_flash_sale = 0 ORDER BY p.created_at DESC";
         $res = $mysqli->query($sql);
         while ($row = $res->fetch_assoc()) {
             $products[] = $row;
@@ -189,6 +189,26 @@ switch ($action) {
             $flashProducts[] = $row;
         }
         include 'views/flash-sale.php';
+        break;
+        
+    case 'add-flash-sale-product':
+        // Only suppliers can add flash sale products
+        if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'supplier') {
+            header('Location: router.php');
+            exit;
+        }
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Force is_flash_sale to 1
+            $_POST['is_flash_sale'] = 1;
+            $result = $controller->addProduct($_POST, $_FILES);
+            if (isset($result['success'])) {
+                header('Location: router.php?action=flash-sale');
+                exit;
+            } else {
+                $addProductError = $result['error'];
+            }
+        }
+        include 'views/add-flash-sale-product.php';
         break;
         
     default:

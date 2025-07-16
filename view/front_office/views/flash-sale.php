@@ -32,6 +32,13 @@ if (session_status() === PHP_SESSION_NONE) {
         footer {
             flex-shrink: 0;
         }
+        .flash-countdown {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+        }
     </style>
 </head>
 <body style="min-height: 100vh; display: flex; flex-direction: column;">
@@ -84,7 +91,46 @@ if (session_status() === PHP_SESSION_NONE) {
     </div>
 </nav>
     <div class="container py-5">
+        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier'): ?>
+            <div class="mb-4 text-end">
+                <a href="router.php?action=add-flash-sale-product" class="btn btn-warning btn-lg fw-bold shadow">
+                    + Add Flash Sale Product
+                </a>
+            </div>
+        <?php endif; ?>
         <!-- Flash sale content here -->
+        <?php if (!empty($flashProducts)): ?>
+            <div class="row g-4">
+                <?php foreach ($flashProducts as $product): ?>
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="card product-card h-100 shadow-sm">
+                            <img src="<?= $product['images'] ? json_decode($product['images'], true)[0] : 'https://dummyimage.com/450x300/dee2e6/6c757d.jpg' ?>" class="card-img-top" alt="<?= htmlspecialchars($product['title']) ?>">
+                            <div class="card-body">
+                                <h5 class="card-title"><?= htmlspecialchars($product['title']) ?></h5>
+                                <p class="card-text"><?= htmlspecialchars($product['description']) ?></p>
+                                <div class="flash-price mb-2"><?= number_format($product['price'], 2) ?> DT</div>
+                                <!-- Countdown Timer -->
+                                <?php
+                                // Use 'end_time' if available, otherwise set a placeholder (e.g., 24h from created_at)
+                                $endTimestamp = null;
+                                if (!empty($product['end_time'])) {
+                                    $endTimestamp = is_numeric($product['end_time']) ? $product['end_time'] : strtotime($product['end_time']);
+                                } elseif (!empty($product['created_at'])) {
+                                    $endTimestamp = strtotime($product['created_at']) + 3*3600; // 24h after creation
+                                }
+                                ?>
+                                <?php if ($endTimestamp): ?>
+                                    <div class="flash-countdown mb-2" data-end="<?= $endTimestamp ?>"></div>
+                                <?php endif; ?>
+                                <a href="router.php?action=product&id=<?= $product['id'] ?>" class="btn btn-outline-dark">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-info text-center">No flash sale products available at the moment.</div>
+        <?php endif; ?>
     </div>
 <!-- Footer-->
 <footer class="py-5 bg-dark">
@@ -108,6 +154,7 @@ function updateCountdowns() {
             var m = Math.floor((diff % 3600000) / 60000);
             var s = Math.floor((diff % 60000) / 1000);
             el.textContent = 'Ends in ' + h + 'h ' + m + 'm ' + s + 's';
+            el.style.color = '#ff4b2b';
         }
     });
 }
