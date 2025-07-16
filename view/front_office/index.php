@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 // --- DB CONNECTION (update credentials as needed) ---
 $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
 if ($mysqli->connect_errno) {

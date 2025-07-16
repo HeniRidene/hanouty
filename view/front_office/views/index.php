@@ -1,3 +1,9 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
+?>
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -233,7 +239,6 @@
                 <div class="collapse navbar-collapse" id="navbarSupportedContent">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
                         <li class="nav-item"><a class="nav-link text-white" aria-current="page" href="/hanouty/view/front_office/router.php">Home</a></li>
-                        <li class="nav-item"><a class="nav-link text-white" href="#suppliers">Products</a></li>
                         <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=common-products">Common Products</a></li>
                         <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=flash-sale">Flash Sale</a></li>
                         <?php if (isset($_SESSION['user_id'])): ?>
@@ -600,8 +605,5 @@
         });
         </script>
         
-        <?php if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        } ?>
     </body>
 </html> 
