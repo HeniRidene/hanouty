@@ -96,7 +96,10 @@ if (session_status() === PHP_SESSION_NONE) {
                                 <img src="<?= htmlspecialchars($product['profile_image']) ?>" alt="Supplier" class="rounded-circle me-2" width="40" height="40">
                             <?php endif; ?>
                             <div>
-                                <div class="fw-bold">Supplier: <?= htmlspecialchars($product['business_name'] ?? $product['supplier_name'] ?? '') ?></div>
+                                <?php
+                                $supplierDisplayName = !empty($product['business_name']) ? $product['business_name'] : (!empty($product['supplier_name']) ? $product['supplier_name'] : 'Unknown Supplier');
+                                ?>
+                                <div class="fw-bold">Supplier: <?= htmlspecialchars($supplierDisplayName) ?></div>
                                 <?php if (!empty($product['bio'])): ?>
                                     <small class="text-muted"><?= htmlspecialchars($product['bio']) ?></small>
                                 <?php endif; ?>

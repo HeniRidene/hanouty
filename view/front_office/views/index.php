@@ -326,168 +326,81 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
         <?php endif; ?>
 
         <!-- Suppliers Section -->
-        <?php if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'supplier'): ?>
-        <section class="py-5" id="suppliers">
-            <div class="container px-4 px-lg-5">
-                <h2 class="text-center mb-5">Our products</h2>
-                
-                <?php if (empty($suppliers)): ?>
-                    <div class="text-center">
-                        <p class="text-muted">No suppliers available at the moment.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($suppliers as $supplier): ?>
-                        <div class="supplier-widget">
-                            <!-- Supplier Name Header -->
-                            <div class="supplier-header">
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div>
-                                        <h4 class="supplier-name mb-0">
-                                            <?= htmlspecialchars($supplier['business_name'] ?: $supplier['name']) ?>
-                                            <?php if ($supplier['is_verified']): ?>
-                                                <span class="verified-badge">✓ Verified</span>
-                                            <?php endif; ?>
-                                        </h4>
-                                        <?php if ($supplier['bio']): ?>
-                                            <p class="supplier-bio mb-0 mt-1"><?= htmlspecialchars($supplier['bio']) ?></p>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="text-end">
-                                        <small class="text-muted d-block"><?= $supplier['products_count'] ?> products</small>
-                                        <?php if ($supplier['profile_image']): ?>
-                                            <img src="<?= htmlspecialchars($supplier['profile_image']) ?>" alt="Profile" class="rounded-circle" width="40" height="40">
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Products List (vertical) -->
-                            <div class="products-list">
-                                <?php 
-                                $supplierProducts = $controller->getSupplierProducts($supplier['id']);
-                                $displayProducts = array_slice($supplierProducts, 0, 6); // Show max 6 products
-                                ?>
-                                <?php foreach ($displayProducts as $product): ?>
-                                <div class="product-card mb-3 d-flex align-items-center" style="flex-direction: row;">
-                                    <img class="product-image me-3" style="width: 150px; height: 100px; object-fit: cover;" src="<?= $product['images'] ? json_decode($product['images'], true)[0] : 'https://dummyimage.com/450x300/dee2e6/6c757d.jpg' ?>" alt="<?= htmlspecialchars($product['title']) ?>">
-                                    <div class="product-info flex-grow-1">
-                                        <h6 class="product-title mb-1"><?= htmlspecialchars($product['title']) ?></h6>
-                                        <div class="product-price mb-2">$<?= number_format($product['price'], 2) ?></div>
-                                    </div>
-                                    <div>
-                                        <a href="router.php?action=product&id=<?= $product['id'] ?>" class="btn btn-outline-dark">Details</a>
-                                    </div>
-                                </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                    
-                    <!-- Pagination -->
-                    <?php if ($pagination['total_pages'] > 1): ?>
-                    <nav aria-label="Suppliers pagination" class="mt-5">
-                        <ul class="pagination justify-content-center">
-                            <?php if ($pagination['current_page'] > 1): ?>
-                                <li class="page-item">
-                                    <a class="page-link" href="router.php?page=<?= $pagination['current_page'] - 1 ?><?= $searchTerm ? '&search=' . urlencode($searchTerm) : '' ?>">Previous</a>
-                                </li>
-                            <?php endif; ?>
-                            
-                            <?php for ($i = max(1, $pagination['current_page'] - 2); $i <= min($pagination['total_pages'], $pagination['current_page'] + 2); $i++): ?>
-                                <li class="page-item <?= $i == $pagination['current_page'] ? 'active' : '' ?>">
-                                    <a class="page-link" href="router.php?page=<?= $i ?><?= $searchTerm ? '&search=' . urlencode($searchTerm) : '' ?>"><?= $i ?></a>
-                                </li>
-                            <?php endfor; ?>
-                            
-                            <?php if ($pagination['current_page'] < $pagination['total_pages']): ?>
-                                <li class="page-item">
-                                    <a class="page-link" href="router.php?page=<?= $pagination['current_page'] + 1 ?><?= $searchTerm ? '&search=' . urlencode($searchTerm) : '' ?>">Next</a>
-                                </li>
-                            <?php endif; ?>
-                        </ul>
-                    </nav>
-                    <?php endif; ?>
-                <?php endif; ?>
-            </div>
-        </section>
-        <?php endif; ?>
+        <?php /*
+        if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier') {
+            // Supplier grouping section removed as per user request
+        }
+        */ ?>
 
-        <!-- Featured Suppliers Section -->
-        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier'): ?>
+        <!-- Main Product Display: Spots for all, controls only for suppliers -->
         <section class="py-5">
             <div class="container px-4 px-lg-5">
                 <h2 class="text-center mb-5">Featured Spots</h2>
                 <div class="featured-suppliers">
                     <?php for ($i = 1; $i <= 10; $i++): ?>
                         <div class="supplier-widget spot-<?= $i ?>">
-                            <?php if (isset($spots[$i]) && $spots[$i]['supplier_id']): ?>
-                                <?php if ($spots[$i]['product_id']): ?>
-                                    <?php 
-                                    $productImages = [];
-                                    if (!empty($spots[$i]['images'])) {
-                                        $productImages = json_decode($spots[$i]['images'], true);
-                                    }
-                                    ?>
-                                    <div class="featured-spot-product p-4 d-flex flex-column flex-md-row align-items-center gap-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 1rem; box-shadow: 0 6px 24px rgba(25,135,84,0.08);">
-                                        <?php if (!empty($productImages)): ?>
-                                            <div id="spot-carousel-<?= $i ?>" class="carousel slide flex-shrink-0" data-bs-ride="carousel" style="width: 340px; max-width: 100%;">
-                                                <div class="carousel-inner rounded-3 shadow">
-                                                    <?php foreach ($productImages as $imgIdx => $img): ?>
-                                                        <div class="carousel-item<?= $imgIdx === 0 ? ' active' : '' ?>">
-                                                            <img src="<?= htmlspecialchars($img) ?>" class="d-block w-100" style="height: 260px; object-fit: cover; border-radius: 1rem;" alt="Product Image <?= $imgIdx + 1 ?>">
-                                                        </div>
-                                                    <?php endforeach; ?>
-                                                </div>
-                                                <?php if (count($productImages) > 1): ?>
-                                                    <button class="carousel-control-prev" type="button" data-bs-target="#spot-carousel-<?= $i ?>" data-bs-slide="prev">
-                                                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                                        <span class="visually-hidden">Previous</span>
-                                                    </button>
-                                                    <button class="carousel-control-next" type="button" data-bs-target="#spot-carousel-<?= $i ?>" data-bs-slide="next">
-                                                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                                        <span class="visually-hidden">Next</span>
-                                                    </button>
-                                                <?php endif; ?>
+                            <?php if (isset($spots[$i]) && $spots[$i]['product_id']): ?>
+                                <?php 
+                                $productImages = [];
+                                if (!empty($spots[$i]['images'])) {
+                                    $productImages = json_decode($spots[$i]['images'], true);
+                                }
+                                ?>
+                                <div class="featured-spot-product p-4 d-flex flex-column flex-md-row align-items-center gap-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 1rem; box-shadow: 0 6px 24px rgba(25,135,84,0.08);">
+                                    <?php if (!empty($productImages)): ?>
+                                        <div id="spot-carousel-<?= $i ?>" class="carousel slide flex-shrink-0" data-bs-ride="carousel" style="width: 340px; max-width: 100%;">
+                                            <div class="carousel-inner rounded-3 shadow">
+                                                <?php foreach ($productImages as $imgIdx => $img): ?>
+                                                    <div class="carousel-item<?= $imgIdx === 0 ? ' active' : '' ?>">
+                                                        <img src="<?= htmlspecialchars($img) ?>" class="d-block w-100" style="height: 260px; object-fit: cover; border-radius: 1rem;" alt="Product Image <?= $imgIdx + 1 ?>">
+                                                    </div>
+                                                <?php endforeach; ?>
                                             </div>
-                                        <?php endif; ?>
-                                        <div class="flex-grow-1">
-                                            <h3 class="fw-bold mb-2" style="font-size: 2rem; color: #198754; letter-spacing: -1px;">
-                                                <?= htmlspecialchars($spots[$i]['title']) ?> 
-                                                <!-- No price badge for owned spots with product -->
-                                            </h3>
-                                            <p class="mb-2" style="font-size: 1.1rem; color: #444;"><?= htmlspecialchars($spots[$i]['description']) ?></p>
-                                            <div class="d-flex align-items-center mb-3">
-                                                <span class="fs-4 fw-bold text-success me-3"><?= htmlspecialchars(number_format($spots[$i]['price'], 2)) ?> DT</span>
-                                            </div>
-                                            <?php if ($userRole === 'supplier' && $supplierId == $spots[$i]['supplier_id']): ?>
-                                                <a href="router.php?action=edit-product&id=<?= $spots[$i]['product_id'] ?>&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-warning px-3 py-2 fw-bold" title="Modify Offer">
-                                                    <i class="bi bi-pencil-square"></i>
-                                                </a>
-                                                <a href="router.php?action=delete-product&id=<?= $spots[$i]['product_id'] ?>&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-danger px-3 py-2 ms-2" title="Delete Product" onclick="return confirm('Are you sure you want to delete this product?');">
-                                                    <i class="bi bi-trash"></i>
-                                                </a>
+                                            <?php if (count($productImages) > 1): ?>
+                                                <button class="carousel-control-prev" type="button" data-bs-target="#spot-carousel-<?= $i ?>" data-bs-slide="prev">
+                                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                    <span class="visually-hidden">Previous</span>
+                                                </button>
+                                                <button class="carousel-control-next" type="button" data-bs-target="#spot-carousel-<?= $i ?>" data-bs-slide="next">
+                                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                    <span class="visually-hidden">Next</span>
+                                                </button>
                                             <?php endif; ?>
                                         </div>
+                                    <?php endif; ?>
+                                    <div class="flex-grow-1">
+                                        <h3 class="fw-bold mb-2" style="font-size: 2rem; color: #198754; letter-spacing: -1px;">
+                                            <?= htmlspecialchars($spots[$i]['title']) ?> 
+                                        </h3>
+                                        <p class="mb-2" style="font-size: 1.1rem; color: #444;"><?= htmlspecialchars($spots[$i]['description']) ?></p>
+                                        <div class="d-flex align-items-center mb-3">
+                                            <span class="fs-4 fw-bold text-success me-3"><?= htmlspecialchars(number_format($spots[$i]['price'], 2)) ?> DT</span>
+                                        </div>
+                                        <a href="router.php?action=product&id=<?= $spots[$i]['product_id'] ?>" class="btn btn-outline-dark">View Details</a>
+                                        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier' && $supplierId == $spots[$i]['supplier_id']): ?>
+                                            <a href="router.php?action=edit-product&id=<?= $spots[$i]['product_id'] ?>&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-warning px-3 py-2 fw-bold" title="Modify Offer">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+                                            <a href="router.php?action=delete-product&id=<?= $spots[$i]['product_id'] ?>&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-danger px-3 py-2 ms-2" title="Delete Product" onclick="return confirm('Are you sure you want to delete this product?');">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        <?php endif; ?>
                                     </div>
-                                <?php else: ?>
+                                </div>
+                            <?php else: ?>
+                                <!-- If spot is empty, show nothing for clients/guests, or controls for suppliers -->
+                                <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier'): ?>
                                     <h3>Spot n°<?= $i ?></h3>
-                                    <?php if ($userRole === 'supplier' && isset($spots[$i]['supplier_id']) && $spots[$i]['supplier_id'] == $supplierId && empty($spots[$i]['product_id'])): ?>
+                                    <?php if (isset($spots[$i]['supplier_id']) && $spots[$i]['supplier_id'] == $supplierId && empty($spots[$i]['product_id'])): ?>
                                         <button class="btn" disabled>Spot Owned</button>
                                         <a href="router.php?action=add-product&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-success ms-2">Add Product</a>
-                                    <?php elseif ($userRole === 'supplier' && isset($spots[$i]['supplier_id']) && $spots[$i]['supplier_id'] != $supplierId): ?>
+                                    <?php elseif (isset($spots[$i]['supplier_id']) && $spots[$i]['supplier_id'] != $supplierId): ?>
                                         <button class="btn btn-secondary" disabled>Can't purchase this spot</button>
                                     <?php else: ?>
-                                        <span class="badge-secondary">Available</span>
+                                        <a href="#" class="btn buy-spot-btn" data-spot="<?= $i ?>" data-page="<?= $featuredPage ?>">
+                                            Buy this spot for <?= $spotPrices[$i] ?> DT
+                                        </a>
                                     <?php endif; ?>
-                                <?php endif; ?>
-                            <?php else: ?>
-                                <h3>Spot n°<?= $i ?></h3>
-                                <?php if ($userRole === 'supplier'): ?>
-                                    <a href="#" class="btn buy-spot-btn" data-spot="<?= $i ?>" data-page="<?= $featuredPage ?>">
-                                        Buy this spot for <?= $spotPrices[$i] ?> DT
-                                    </a>
-                                <?php else: ?>
-                                    <span class="badge-secondary">Available</span>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </div>
@@ -510,7 +423,6 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                 </nav>
             </div>
         </section>
-        <?php endif; ?>
 
         <!-- Footer-->
         <footer class="py-5 bg-dark">
