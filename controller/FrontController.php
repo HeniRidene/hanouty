@@ -308,5 +308,14 @@ class FrontController {
             return ['error' => 'An error occurred while updating the product: ' . $e->getMessage()];
         }
     }
+
+    // Delete product
+    public function deleteProduct($productId) {
+        try {
+            return $this->productModel->deleteProduct($productId);
+        } catch (Exception $e) {
+            return false;
+        }
+    }
 }
 ?> 

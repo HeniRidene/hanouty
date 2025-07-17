@@ -15,8 +15,10 @@ if (session_status() === PHP_SESSION_NONE) {
     <style>
         .flash-header { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); color: white; padding: 3rem 0; text-align: center; }
         .flash-header h1 { font-size: 3rem; font-weight: bold; }
-        .product-card { transition: transform 0.3s; }
+        .product-card { transition: transform 0.3s; height: 480px; display: flex; flex-direction: column; }
         .product-card:hover { transform: scale(1.05); }
+        .card-img-top { height: 250px; object-fit: cover; width: 100%; }
+        .card-body { flex: 1 1 auto; display: flex; flex-direction: column; }
         .flash-price { color: #ff4b2b; font-weight: bold; }
         html, body {
             height: 100%;
@@ -104,7 +106,23 @@ if (session_status() === PHP_SESSION_NONE) {
                 <?php foreach ($flashProducts as $product): ?>
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="card product-card h-100 shadow-sm">
-                            <img src="<?= $product['images'] ? json_decode($product['images'], true)[0] : 'https://dummyimage.com/450x300/dee2e6/6c757d.jpg' ?>" class="card-img-top" alt="<?= htmlspecialchars($product['title']) ?>">
+                            <?php
+                            $imagePath = 'https://dummyimage.com/450x300/dee2e6/6c757d.jpg';
+                            if (!empty($product['images'])) {
+                                $imagesArr = @json_decode($product['images'], true);
+                                if (is_array($imagesArr) && !empty($imagesArr[0])) {
+                                    $firstImg = $imagesArr[0];
+                                    if (filter_var($firstImg, FILTER_VALIDATE_URL)) {
+                                        $imagePath = $firstImg;
+                                    } elseif (strpos($firstImg, '/') === 0) {
+                                        $imagePath = $firstImg; // already absolute
+                                    } else {
+                                        $imagePath = '/hanouty/' . ltrim($firstImg, '/');
+                                    }
+                                }
+                            }
+                            ?>
+                            <img src="<?= htmlspecialchars($imagePath) ?>" class="card-img-top" alt="<?= htmlspecialchars($product['title']) ?>">
                             <div class="card-body">
                                 <h5 class="card-title"><?= htmlspecialchars($product['title']) ?></h5>
                                 <p class="card-text"><?= htmlspecialchars($product['description']) ?></p>

@@ -241,6 +241,7 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                         <li class="nav-item"><a class="nav-link text-white" aria-current="page" href="/hanouty/view/front_office/router.php">Home</a></li>
                         <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=common-products">Common Products</a></li>
                         <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=flash-sale">Flash Sale</a></li>
+                        <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=about-us">About Us</a></li>
                         <?php if (isset($_SESSION['user_id'])): ?>
                             <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=profile">Profile</a></li>
                         <?php endif; ?>
@@ -459,7 +460,12 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                                                 <span class="fs-4 fw-bold text-success me-3"><?= htmlspecialchars(number_format($spots[$i]['price'], 2)) ?> DT</span>
                                             </div>
                                             <?php if ($userRole === 'supplier' && $supplierId == $spots[$i]['supplier_id']): ?>
-                                                <a href="router.php?action=edit-product&id=<?= $spots[$i]['product_id'] ?>&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-warning px-4 py-2 fw-bold">Modify Offer</a>
+                                                <a href="router.php?action=edit-product&id=<?= $spots[$i]['product_id'] ?>&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-warning px-3 py-2 fw-bold" title="Modify Offer">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </a>
+                                                <a href="router.php?action=delete-product&id=<?= $spots[$i]['product_id'] ?>&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-danger px-3 py-2 ms-2" title="Delete Product" onclick="return confirm('Are you sure you want to delete this product?');">
+                                                    <i class="bi bi-trash"></i>
+                                                </a>
                                             <?php endif; ?>
                                         </div>
                                     </div>

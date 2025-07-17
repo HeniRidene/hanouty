@@ -211,6 +211,41 @@ switch ($action) {
         include 'views/add-flash-sale-product.php';
         break;
         
+    case 'about-us':
+        include 'views/about-us.php';
+        break;
+        
+    case 'delete-product':
+        // Only suppliers can delete their own products
+        if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'supplier') {
+            header('Location: router.php');
+            exit;
+        }
+        $productId = $_GET['id'] ?? null;
+        $featuredPage = $_GET['featured_page'] ?? 1;
+        $spot = $_GET['spot'] ?? null;
+        if (!$productId) {
+            header('Location: router.php');
+            exit;
+        }
+        // Get product and check ownership
+        $product = $controller->getProduct($productId);
+        if (!$product || $product['user_id'] != $_SESSION['user_id']) {
+            header('Location: router.php');
+            exit;
+        }
+        // Remove product from featured spot
+        $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
+        $updateStmt = $mysqli->prepare('UPDATE featured_spots SET product_id = NULL WHERE page_number = ? AND spot_number = ? AND product_id = ?');
+        $updateStmt->bind_param('iii', $featuredPage, $spot, $productId);
+        $updateStmt->execute();
+        $updateStmt->close();
+        // Delete product from products table
+        $controller->deleteProduct($productId);
+        // Redirect back to the featured page
+        header('Location: router.php?featured_page=' . urlencode($featuredPage));
+        exit;
+        
     default:
         // --- DB CONNECTION ---
         $mysqli = new mysqli('localhost', 'root', '', 'hanouty');

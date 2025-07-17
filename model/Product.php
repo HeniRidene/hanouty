@@ -150,5 +150,17 @@ class Product {
             throw new Exception("Error updating product: " . $e->getMessage());
         }
     }
+
+    // Delete product by ID
+    public function deleteProduct($productId) {
+        try {
+            $sql = "DELETE FROM products WHERE id = :id";
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->bindParam(':id', $productId);
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            throw new Exception("Error deleting product: " . $e->getMessage());
+        }
+    }
 }
 ?> 

@@ -71,11 +71,13 @@ if (session_status() === PHP_SESSION_NONE) {
                     $images = $product['images'] ? json_decode($product['images'], true) : [];
                     $mainImage = $images[0] ?? 'https://dummyimage.com/450x300/dee2e6/6c757d.jpg';
                     ?>
-                    <img src="<?= htmlspecialchars($mainImage) ?>" class="img-fluid rounded-start w-100" alt="<?= htmlspecialchars($product['title']) ?>">
+                    <div id="main-image-container">
+                        <img id="main-product-image" src="<?= htmlspecialchars($mainImage) ?>" class="img-fluid rounded-start w-100" alt="<?= htmlspecialchars($product['title']) ?>">
+                    </div>
                     <?php if (count($images) > 1): ?>
                         <div class="d-flex flex-wrap gap-2 mt-2">
-                            <?php foreach ($images as $img): ?>
-                                <img src="<?= htmlspecialchars($img) ?>" class="rounded" style="width: 60px; height: 60px; object-fit: cover;" alt="">
+                            <?php foreach ($images as $idx => $img): ?>
+                                <img src="<?= htmlspecialchars($img) ?>" class="rounded product-thumb<?= $idx === 0 ? ' selected-thumb' : '' ?>" style="width: 60px; height: 60px; object-fit: cover; cursor:pointer; border:2px solid #eee;" alt="" data-img="<?= htmlspecialchars($img) ?>">
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
@@ -112,5 +114,38 @@ if (session_status() === PHP_SESSION_NONE) {
     </div>
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Image thumbnail click to change main image
+const mainImg = document.getElementById('main-product-image');
+document.querySelectorAll('.product-thumb').forEach(function(thumb) {
+    thumb.addEventListener('click', function() {
+        mainImg.src = this.getAttribute('data-img');
+        document.querySelectorAll('.product-thumb').forEach(t => t.classList.remove('selected-thumb'));
+        this.classList.add('selected-thumb');
+    });
+});
+</script>
+<style>
+.selected-thumb {
+    border: 2px solid #198754 !important;
+    box-shadow: 0 0 0 2px #19875433;
+}
+#main-image-container {
+    width: 100%;
+    height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    border-radius: 0.5rem;
+    margin-bottom: 10px;
+}
+#main-product-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+}
+</style>
 </body>
 </html> 
