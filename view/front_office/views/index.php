@@ -254,9 +254,14 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                     </form>
                     
                     <!-- User Menu -->
-                    <div class="d-flex">
+                    <div class="d-flex align-items-center">
+                        <a href="router.php?action=cart" class="btn btn-outline-dark position-relative me-2">
+                            <i class="bi bi-cart"></i>
+                            <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                <?= isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0 ?>
+                            </span>
+                        </a>
                         <?php if (isset($_SESSION['user_id'])): ?>
-                            <!-- No Add Product or 10 DT button in navbar -->
                             <div class="dropdown">
                                 <button class="btn btn-outline-dark dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi-person-fill me-1"></i>
@@ -275,7 +280,7 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                             <button class="btn btn-outline-dark" type="button" onclick="showLoginModal()">
                                 <i class="bi-person-fill me-1"></i>
                                 Login
-                            </button>   
+                            </button>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -315,6 +320,10 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                             <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
                                 <div class="text-center">
                                     <a class="btn btn-outline-dark mt-auto" href="router.php?action=product&id=<?= $product['id'] ?>">View Details</a>
+                                    <form id="buy-form-search-<?= $product['id'] ?>" method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" style="display:inline-block; margin-left:8px;">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <button type="submit" class="btn btn-success">Buy</button>
+                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -377,6 +386,10 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                                             <span class="fs-4 fw-bold text-success me-3"><?= htmlspecialchars(number_format($spots[$i]['price'], 2)) ?> DT</span>
                                         </div>
                                         <a href="router.php?action=product&id=<?= $spots[$i]['product_id'] ?>" class="btn btn-outline-dark">View Details</a>
+                                        <form id="buy-form-spot-<?= $spots[$i]['product_id'] ?>" method="POST" action="router.php?action=add-to-cart&id=<?= $spots[$i]['product_id'] ?>" style="display:inline-block; margin-left:8px;">
+                                            <input type="hidden" name="quantity" value="1">
+                                            <button type="submit" class="btn btn-success">Buy</button>
+                                        </form>
                                         <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier' && $supplierId == $spots[$i]['supplier_id']): ?>
                                             <a href="router.php?action=edit-product&id=<?= $spots[$i]['product_id'] ?>&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-warning px-3 py-2 fw-bold" title="Modify Offer">
                                                 <i class="bi bi-pencil-square"></i>
@@ -431,35 +444,44 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
             </div>
         </footer>
 
-        <!-- Login Modal -->
-        <div id="loginModal" class="login-modal">
-            <div class="modal-backdrop" onclick="hideLoginModal()"></div>
-            <div class="modal-content">
-                <button type="button" class="close-btn" onclick="hideLoginModal()">&times;</button>
-                <h4 class="mb-4">Login to Hanouty</h4>
-                
-                <?php if (isset($loginError)): ?>
-                    <div class="alert alert-danger"><?= htmlspecialchars($loginError) ?></div>
-                <?php endif; ?>
-                
-                <form method="POST" action="/hanouty/view/front_office/router.php?action=login">
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
+        <!-- Toast for add to cart -->
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+            <div id="cartToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        Product added to cart!
                     </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <div class="d-grid">
-                        <button type="submit" name="login" class="btn btn-dark">Login</button>
-                    </div>
-                </form>
-                
-                <div class="text-center mt-3">
-                    <p class="mb-0">Don't have an account? <a href="/hanouty/view/front_office/router.php?action=register">Register here</a></p>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
             </div>
+        </div>
+
+        <!-- Login Modal -->
+        <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="loginModalLabel">Login to Hanouty</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <form id="loginForm" method="POST" action="router.php?action=login">
+                <div class="modal-body">
+                  <div id="loginError" class="alert alert-danger d-none"></div>
+                  <div class="mb-3">
+                    <label for="loginEmail" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="loginEmail" name="email" required>
+                  </div>
+                  <div class="mb-3">
+                    <label for="loginPassword" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="loginPassword" name="password" required>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="submit" class="btn btn-success w-100">Login</button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
 
         <!-- Bootstrap core JS-->
@@ -468,20 +490,7 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
         <script src="js/scripts.js"></script>
         
         <script>
-            function showLoginModal() {
-                document.getElementById('loginModal').classList.add('show');
-            }
-            
-            function hideLoginModal() {
-                document.getElementById('loginModal').classList.remove('show');
-            }
-            
-            // Close modal on escape key
-            document.addEventListener('keydown', function(event) {
-                if (event.key === 'Escape') {
-                    hideLoginModal();
-                }
-            });
+            // Remove login modal and showLoginModal() JS
         </script>
 
         <script>
@@ -520,6 +529,48 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                         });
                 });
             });
+        });
+        </script>
+        
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          window.showLoginModal = function() {
+            var loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+            loginModal.show();
+          }
+          const loginForm = document.getElementById('loginForm');
+          if (loginForm) {
+            loginForm.addEventListener('submit', function(e) {
+              e.preventDefault();
+              document.getElementById('loginError').classList.add('d-none');
+              const formData = new FormData(this);
+              fetch('router.php?action=login', {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+              })
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  // Hide modal and reload after a short delay
+                  var modalEl = document.getElementById('loginModal');
+                  var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                  modalInstance.hide();
+                  setTimeout(function() {
+                    window.location.reload();
+                  }, 500);
+                } else {
+                  document.getElementById('loginError').textContent = data.error || 'Login failed.';
+                  document.getElementById('loginError').classList.remove('d-none');
+                }
+              })
+              .catch((err) => {
+                document.getElementById('loginError').textContent = 'Network error. Please try again.';
+                document.getElementById('loginError').classList.remove('d-none');
+                console.error('Login AJAX error:', err);
+              });
+            });
+          }
         });
         </script>
         

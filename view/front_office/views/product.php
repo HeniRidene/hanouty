@@ -36,7 +36,13 @@ if (session_status() === PHP_SESSION_NONE) {
                 <button class="btn btn-outline-dark" type="submit">Search</button>
             </form>
             <!-- User Menu -->
-            <div class="d-flex">
+            <div class="d-flex align-items-center">
+                <a href="router.php?action=cart" class="btn btn-outline-dark position-relative me-2">
+                    <i class="bi bi-cart"></i>
+                    <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        <?= isset($_SESSION['cart']) ? array_sum($_SESSION['cart']) : 0 ?>
+                    </span>
+                </a>
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <div class="dropdown">
                         <button class="btn btn-outline-dark dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -106,6 +112,12 @@ if (session_status() === PHP_SESSION_NONE) {
                             </div>
                         </div>
                     </div>
+                    <form id="buy-form" method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" class="mt-4">
+                        <div class="input-group mb-3" style="max-width: 200px;">
+                            <input type="number" name="quantity" class="form-control" value="1" min="1" style="min-width: 60px;" required>
+                            <button type="submit" class="btn btn-success">Buy</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -116,6 +128,32 @@ if (session_status() === PHP_SESSION_NONE) {
         <p class="m-0 text-center text-white">Copyright &copy; Hanouty 2025</p>
     </div>
 </footer>
+<!-- Login Modal -->
+<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="loginModalLabel">Login Required</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>You must be logged in to add products to your cart.</p>
+        <a href="router.php?action=login" class="btn btn-success">Go to Login</a>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Toast for add to cart -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="cartToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">
+        Product added to cart!
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 // Image thumbnail click to change main image
@@ -126,6 +164,39 @@ document.querySelectorAll('.product-thumb').forEach(function(thumb) {
         document.querySelectorAll('.product-thumb').forEach(t => t.classList.remove('selected-thumb'));
         this.classList.add('selected-thumb');
     });
+});
+
+function showLoginModal() {
+    var loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+    loginModal.show();
+}
+
+document.getElementById('buy-form').addEventListener('submit', function(e) {
+    <?php if (!isset($_SESSION['user_id'])): ?>
+        e.preventDefault();
+        showLoginModal();
+        return false;
+    <?php else: ?>
+        e.preventDefault();
+        var form = this;
+        var formData = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.ok ? response.text() : Promise.reject())
+        .then(() => {
+            // Update cart count
+            fetch('router.php?action=cart-count')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('cart-count').textContent = data.count;
+                });
+            // Show toast
+            var toast = new bootstrap.Toast(document.getElementById('cartToast'));
+            toast.show();
+        });
+    <?php endif; ?>
 });
 </script>
 <style>

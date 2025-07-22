@@ -99,6 +99,14 @@ CREATE TABLE `users` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- Table for user carts
+CREATE TABLE IF NOT EXISTS carts (
+    user_id INT PRIMARY KEY,
+    cart_data JSON NOT NULL,
+    updated_at DATETIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 --
 -- Index pour les tables déchargées
 --

@@ -1,5 +1,48 @@
 <?php
+ob_start();
 require_once $_SERVER['DOCUMENT_ROOT'] . '/hanouty/controller/FrontController.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+// --- Cart Helper Functions ---
+function getCart() {
+    if (!isset($_SESSION['cart'])) {
+        $_SESSION['cart'] = [];
+    }
+    return $_SESSION['cart'];
+}
+function saveCart($cart) {
+    $_SESSION['cart'] = $cart;
+    // If user is logged in, save to DB
+    if (isset($_SESSION['user_id'])) {
+        $userId = $_SESSION['user_id'];
+        $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
+        $cartJson = json_encode($cart);
+        $stmt = $mysqli->prepare('INSERT INTO carts (user_id, cart_data, updated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE cart_data = VALUES(cart_data), updated_at = NOW()');
+        $stmt->bind_param('is', $userId, $cartJson);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+function loadCartFromDb() {
+    if (isset($_SESSION['user_id'])) {
+        $userId = $_SESSION['user_id'];
+        $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
+        $stmt = $mysqli->prepare('SELECT cart_data FROM carts WHERE user_id = ?');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+        $stmt->bind_result($cartJson);
+        if ($stmt->fetch() && $cartJson) {
+            $_SESSION['cart'] = json_decode($cartJson, true) ?: [];
+        }
+        $stmt->close();
+    }
+}
+// Always load cart from DB for logged-in users
+if (isset($_SESSION['user_id'])) {
+    loadCartFromDb();
+}
 
 $controller = new FrontController();
 
@@ -11,14 +54,49 @@ switch ($action) {
     case 'login':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = $controller->login($_POST['email'] ?? '', $_POST['password'] ?? '');
+            $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
             if (isset($result['redirect'])) {
-                header('Location: ' . $result['redirect']);
-                exit;
+                // Merge session cart with DB cart
+                $userId = $_SESSION['user_id'];
+                $sessionCart = $_SESSION['cart'] ?? [];
+                $dbCart = [];
+                $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
+                $stmt = $mysqli->prepare('SELECT cart_data FROM carts WHERE user_id = ?');
+                $stmt->bind_param('i', $userId);
+                $stmt->execute();
+                $stmt->bind_result($cartJson);
+                if ($stmt->fetch() && $cartJson) {
+                    $dbCart = json_decode($cartJson, true) ?: [];
+                }
+                $stmt->close();
+                foreach ($sessionCart as $pid => $qty) {
+                    if (isset($dbCart[$pid])) {
+                        $dbCart[$pid] += $qty;
+                    } else {
+                        $dbCart[$pid] = $qty;
+                    }
+                }
+                saveCart($dbCart);
+                if ($isAjax) {
+                    ob_end_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true]);
+                    exit;
+                } else {
+                    header('Location: ' . $result['redirect']);
+                    exit;
+                }
             } else {
                 $loginError = $result['error'];
+                if ($isAjax) {
+                    ob_end_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'error' => $loginError]);
+                    exit;
+                }
             }
         }
-        include 'views/index.php';
+        include 'views/login.php';
         break;
         
     case 'logout':
@@ -244,6 +322,74 @@ switch ($action) {
         $controller->deleteProduct($productId);
         // Redirect back to the featured page
         header('Location: router.php?featured_page=' . urlencode($featuredPage));
+        exit;
+        
+    case 'add-to-cart':
+        if (!isset($_SESSION['user_id'])) {
+            // For guests, add to session cart
+            $productId = (int)($_GET['id'] ?? 0);
+            $quantity = max(1, (int)($_POST['quantity'] ?? 1));
+            $cart = getCart();
+            if (isset($cart[$productId])) {
+                $cart[$productId] += $quantity;
+            } else {
+                $cart[$productId] = $quantity;
+            }
+            saveCart($cart);
+        } else {
+            // For logged-in users, add to DB cart
+            $productId = (int)($_GET['id'] ?? 0);
+            $quantity = max(1, (int)($_POST['quantity'] ?? 1));
+            $cart = getCart(); // Get current cart from session
+            if (isset($cart[$productId])) {
+                $cart[$productId] += $quantity;
+            } else {
+                $cart[$productId] = $quantity;
+            }
+            saveCart($cart); // Save updated cart to DB
+        }
+        header('Location: router.php?action=cart');
+        exit;
+        
+    case 'remove-from-cart':
+        if (!isset($_SESSION['user_id'])) {
+            // For guests, remove from session cart
+            $productId = (int)$_GET['id'];
+            $cart = getCart();
+            unset($cart[$productId]);
+            saveCart($cart);
+        } else {
+            // For logged-in users, remove from DB cart
+            $productId = (int)$_GET['id'];
+            $cart = getCart(); // Get current cart from session
+            unset($cart[$productId]);
+            saveCart($cart); // Save updated cart to DB
+        }
+        header('Location: router.php?action=cart');
+        exit;
+        
+    case 'cart':
+        $cart = getCart();
+        $products = [];
+        $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
+        $ids = array_keys($cart);
+        if ($ids) {
+            $idsStr = implode(',', array_map('intval', $ids));
+            $res = $mysqli->query("SELECT * FROM products WHERE id IN ($idsStr)");
+            while ($row = $res->fetch_assoc()) {
+                $row['quantity'] = $cart[$row['id']];
+                $products[] = $row;
+            }
+        }
+        $deliveryFee = 5;
+        include 'views/cart.php';
+        exit;
+        
+    case 'cart-count':
+        $cart = getCart();
+        $count = array_sum($cart);
+        header('Content-Type: application/json');
+        echo json_encode(['count' => $count]);
         exit;
         
     default:
