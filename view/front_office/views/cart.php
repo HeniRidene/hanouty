@@ -60,7 +60,6 @@ if (session_status() === PHP_SESSION_NONE) {
                                     <img src="<?= $product['images'] ? json_decode($product['images'], true)[0] : 'https://dummyimage.com/80x80/dee2e6/6c757d.jpg' ?>" alt="<?= htmlspecialchars($product['title']) ?>" style="width: 60px; height: 60px; object-fit: cover; border-radius: 0.5rem; margin-right: 12px;">
                                     <div>
                                         <div class="fw-bold"><?= htmlspecialchars($product['title']) ?></div>
-                                        <small class="text-muted">ID: <?= $product['id'] ?></small>
                                     </div>
                                 </div>
                             </td>
@@ -89,5 +88,38 @@ if (session_status() === PHP_SESSION_NONE) {
     </div>
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.body.addEventListener('submit', function(e) {
+        if (e.target && e.target.matches('form[id^="buy-form-"]')) {
+            e.preventDefault();
+            var form = e.target;
+            var formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update cart count
+                    fetch('router.php?action=cart-count')
+                        .then(res => res.json())
+                        .then(data => {
+                            var cartCount = document.getElementById('cart-count');
+                            if (cartCount) cartCount.textContent = data.count;
+                        });
+                    // Show toast if available
+                    if (typeof bootstrap !== 'undefined' && document.getElementById('cartToast')) {
+                        var toast = new bootstrap.Toast(document.getElementById('cartToast'));
+                        toast.show();
+                    }
+                }
+            });
+        }
+    });
+});
+</script>
 </body>
 </html> 

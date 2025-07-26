@@ -326,20 +326,15 @@ switch ($action) {
         
     case 'add-to-cart':
         if (!isset($_SESSION['user_id'])) {
-            // For guests, add to session cart
-            $productId = (int)($_GET['id'] ?? 0);
-            $quantity = max(1, (int)($_POST['quantity'] ?? 1));
-            $cart = getCart();
-            if (isset($cart[$productId])) {
-                $cart[$productId] += $quantity;
-            } else {
-                $cart[$productId] = $quantity;
-            }
-            saveCart($cart);
+            // Redirect guests to login page with redirect info
+            $productId = isset($_GET['id']) ? urlencode($_GET['id']) : '';
+            $quantity = isset($_POST['quantity']) ? urlencode($_POST['quantity']) : 1;
+            header('Location: router.php?action=login&redirect=add-to-cart&id=' . $productId . '&quantity=' . $quantity);
+            exit;
         } else {
             // For logged-in users, add to DB cart
             $productId = (int)($_GET['id'] ?? 0);
-            $quantity = max(1, (int)($_POST['quantity'] ?? 1));
+            $quantity = 1; // Always add 1 per click, regardless of form
             $cart = getCart(); // Get current cart from session
             if (isset($cart[$productId])) {
                 $cart[$productId] += $quantity;
@@ -347,9 +342,15 @@ switch ($action) {
                 $cart[$productId] = $quantity;
             }
             saveCart($cart); // Save updated cart to DB
+            // If AJAX, return JSON, else do nothing (stay on page)
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true]);
+                exit;
+            }
+            // No redirect, just exit to stay on the same page
+            exit;
         }
-        header('Location: router.php?action=cart');
-        exit;
         
     case 'remove-from-cart':
         if (!isset($_SESSION['user_id'])) {
@@ -369,6 +370,10 @@ switch ($action) {
         exit;
         
     case 'cart':
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: router.php?action=login&redirect=cart');
+            exit;
+        }
         $cart = getCart();
         $products = [];
         $mysqli = new mysqli('localhost', 'root', '', 'hanouty');
@@ -403,7 +408,23 @@ switch ($action) {
         $userRole = (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier') ? 'supplier' : null;
         $supplierId = $_SESSION['user_id'] ?? null;
         $featuredPage = isset($_GET['featured_page']) ? (int)$_GET['featured_page'] : 1;
+        
+        // Initialize spot prices with defaults
         $spotPrices = [1=>100,2=>90,3=>80,4=>70,5=>60,6=>50,7=>40,8=>30,9=>20,10=>10];
+        // Get actual prices from database - get system supplier first
+        $stmt = $mysqli->query("SELECT s.user_id FROM supplier s JOIN users u ON s.user_id = u.id WHERE s.business_name = 'System Default'");
+        if ($systemSupplier = $stmt->fetch_assoc()) {
+            $systemSupplierId = $systemSupplier['user_id'];
+            // Now get prices using system supplier ID
+            $spotPriceResult = $mysqli->prepare('SELECT spot_number, price_paid FROM featured_spots WHERE page_number=0 AND supplier_id=?');
+            $spotPriceResult->bind_param('i', $systemSupplierId);
+            $spotPriceResult->execute();
+            $result = $spotPriceResult->get_result();
+            while ($row = $result->fetch_assoc()) {
+                $spotPrices[(int)$row['spot_number']] = (float)$row['price_paid'];
+            }
+            $spotPriceResult->close();
+        }
 
         // --- Pagination: count total pages ---
         $res = $mysqli->query('SELECT MAX(page_number) as max_page FROM featured_spots');
@@ -449,3 +470,35 @@ switch ($action) {
         break;
 }
 ?> 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.body.addEventListener('submit', function(e) {
+        if (e.target && e.target.matches('form[id^="buy-form-"]')) {
+            e.preventDefault();
+            var form = e.target;
+            var formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update cart count
+                    fetch('router.php?action=cart-count')
+                        .then(res => res.json())
+                        .then(data => {
+                            var cartCount = document.getElementById('cart-count');
+                            if (cartCount) cartCount.textContent = data.count;
+                        });
+                    if (typeof bootstrap !== 'undefined' && document.getElementById('cartToast')) {
+                        var toast = new bootstrap.Toast(document.getElementById('cartToast'));
+                        toast.show();
+                    }
+                }
+            });
+        }
+    });
+});
+</script> 

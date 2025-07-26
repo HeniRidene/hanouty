@@ -15,7 +15,14 @@ if ($mysqli->connect_errno) {
 $supplierId = $_SESSION['user_id'];
 $featuredPage = isset($_GET['featured_page']) ? (int)$_GET['featured_page'] : 1;
 $spot = isset($_GET['spot']) ? (int)$_GET['spot'] : 0;
+// Fetch spot prices from featured_spots table (global prices)
 $spotPrices = [1=>100,2=>90,3=>80,4=>70,5=>60,6=>50,7=>40,8=>30,9=>20,10=>10];
+$res = $mysqli->query('SELECT spot_number, price_paid FROM featured_spots WHERE page_number=0 AND supplier_id=0');
+if ($res) {
+    while ($row = $res->fetch_assoc()) {
+        $spotPrices[(int)$row['spot_number']] = (float)$row['price_paid'];
+    }
+}
 
 // Validate spot
 if ($spot < 1 || $spot > 10) {

@@ -95,7 +95,7 @@ if (session_status() === PHP_SESSION_NONE) {
                             <a class="btn btn-outline-dark mt-auto" href="router.php?action=product&id=<?= $product['id'] ?>">View Details</a>
                             <form id="buy-form-<?= $product['id'] ?>" method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" style="display:inline-block; margin-left:8px;">
                                 <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="btn btn-success">Buy</button>
+                                <button type="submit" class="btn btn-success add-to-cart-btn">Buy</button>
                             </form>
                         </div>
                     </div>
@@ -113,28 +113,26 @@ if (session_status() === PHP_SESSION_NONE) {
 <!-- Login Modal -->
 <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
   <div class="modal-dialog">
-    <div class="modal-content">
+    <form id="loginForm" class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="loginModalLabel">Login to Hanouty</h5>
+        <h5 class="modal-title" id="loginModalLabel">Login Required</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <form id="loginForm" method="POST" action="router.php?action=login">
-        <div class="modal-body">
-          <div id="loginError" class="alert alert-danger d-none"></div>
-          <div class="mb-3">
-            <label for="loginEmail" class="form-label">Email</label>
-            <input type="email" class="form-control" id="loginEmail" name="email" required>
-          </div>
-          <div class="mb-3">
-            <label for="loginPassword" class="form-label">Password</label>
-            <input type="password" class="form-control" id="loginPassword" name="password" required>
-          </div>
+      <div class="modal-body">
+        <div id="loginError" class="alert alert-danger d-none"></div>
+        <div class="mb-3">
+          <label for="loginEmail" class="form-label">Email address</label>
+          <input type="email" class="form-control" id="loginEmail" name="email" required>
         </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-success w-100">Login</button>
+        <div class="mb-3">
+          <label for="loginPassword" class="form-label">Password</label>
+          <input type="password" class="form-control" id="loginPassword" name="password" required>
         </div>
-      </form>
-    </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-success">Login</button>
+      </div>
+    </form>
   </div>
 </div>
 <!-- Toast for add to cart -->
@@ -166,21 +164,54 @@ document.getElementById('buy-form-<?= $product['id'] ?>').addEventListener('subm
         var formData = new FormData(form);
         fetch(form.action, {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(response => response.ok ? response.text() : Promise.reject())
-        .then(() => {
-            fetch('router.php?action=cart-count')
-                .then(res => res.json())
-                .then(data => {
-                    document.getElementById('cart-count').textContent = data.count;
-                });
-            var toast = new bootstrap.Toast(document.getElementById('cartToast'));
-            toast.show();
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update cart count
+                fetch('router.php?action=cart-count')
+                    .then(res => res.json())
+                    .then(data => {
+                        var cartCount = document.getElementById('cart-count');
+                        if (cartCount) cartCount.textContent = data.count;
+                    });
+                var toast = new bootstrap.Toast(document.getElementById('cartToast'));
+                toast.show();
+            }
         });
     <?php endif; ?>
 });
 <?php endforeach; ?>
+document.addEventListener('DOMContentLoaded', function() {
+    document.body.addEventListener('submit', function(e) {
+        if (e.target && e.target.matches('form[id^="buy-form-"]')) {
+            e.preventDefault();
+            var form = e.target;
+            var formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update cart count
+                    fetch('router.php?action=cart-count')
+                        .then(res => res.json())
+                        .then(data => {
+                            var cartCount = document.getElementById('cart-count');
+                            if (cartCount) cartCount.textContent = data.count;
+                        });
+                    var toast = new bootstrap.Toast(document.getElementById('cartToast'));
+                    toast.show();
+                }
+            });
+        }
+    });
+});
 // Login form AJAX
 const loginForm = document.getElementById('loginForm');
 if (loginForm) {
