@@ -28,33 +28,17 @@ $currentUser = $authController->getCurrentUser();
   <link rel="stylesheet" href="../assets/css/styles.min.css" />
 </head>
 <body>
-<aside class="left-sidebar">
-  <div>
-    <ul class="nav flex-column">
-      <li class="nav-item">
-        <a class="nav-link active" href="index.php">
-          <i class="ti ti-home"></i> Dashboard
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="user-management.php">
-          <i class="ti ti-users"></i> User Management
-        </a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="products.php">
-          <i class="ti ti-package"></i> Products
-        </a>
-      </li>
-    </ul>
-  </div>
-</aside>
-<div class="body-wrapper" style="margin-left:220px;">
-  <header class="app-header">
+<?php 
+require_once '../components/Sidebar.php';
+$sidebar = new Sidebar();
+echo $sidebar->render();
+?>
+<div class="body-wrapper" style="margin-left:260px; padding: 20px;">
+  <header class="app-header bg-white mb-4" style="margin: -20px -20px 20px -20px; padding: 0 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
     <nav class="navbar navbar-expand-lg navbar-light">
       <ul class="navbar-nav">
         <li class="nav-item d-block d-xl-none">
-          <a class="nav-link sidebartoggler " id="headerCollapse" href="javascript:void(0)">
+          <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)">
             <i class="ti ti-menu-2"></i>
           </a>
         </li>
@@ -83,60 +67,168 @@ $currentUser = $authController->getCurrentUser();
       </div>
     </nav>
   </header>
-  <div class="container-fluid mt-4">
-    <div class="row">
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
-          <div class="card-body text-center">
-            <h5 class="card-title">Total Users</h5>
-            <h2><?php echo $userCount; ?></h2>
+  <div class="container-fluid">
+    <!-- Welcome Banner -->
+    <div class="card bg-primary text-white mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center">
+          <div>
+            <h3 class="fw-semibold mb-2">Welcome back, <?php echo htmlspecialchars($currentUser['name']); ?>!</h3>
+            <p class="mb-0">Here's what's happening in your store today.</p>
           </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
-          <div class="card-body text-center">
-            <h5 class="card-title">Suppliers</h5>
-            <h2><?php echo $supplierCount; ?></h2>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
-          <div class="card-body text-center">
-            <h5 class="card-title">Clients</h5>
-            <h2><?php echo $clientCount; ?></h2>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card">
-          <div class="card-body text-center">
-            <h5 class="card-title">Products</h5>
-            <h2><?php echo $productCount; ?></h2>
+          <div class="ms-auto">
+            <button class="btn btn-light">View Reports</button>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Stats Row -->
     <div class="row">
-      <div class="col-lg-6 mb-4">
-        <div class="card">
-          <div class="card-body text-center">
-            <h5 class="card-title">Total Sales</h5>
-            <h2>$<?php echo number_format($totalSales, 2); ?></h2>
-            <p class="text-muted">(Placeholder)</p>
+      <div class="col-lg-3 col-md-6">
+        <div class="card hover-shadow">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="rounded-circle bg-primary-subtle p-3 d-flex align-items-center justify-content-center">
+                <i class="ti ti-users text-primary fs-5"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-semibold"><?php echo $userCount; ?></h3>
+                <p class="text-muted mb-0">Total Users</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="col-lg-6 mb-4">
-        <div class="card">
-          <div class="card-body text-center">
-            <h5 class="card-title">Welcome to Hanouty Admin Dashboard</h5>
-            <p>Use the sidebar to manage users, products, and spot prices.</p>
+      <div class="col-lg-3 col-md-6">
+        <div class="card hover-shadow">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="rounded-circle bg-success-subtle p-3 d-flex align-items-center justify-content-center">
+                <i class="ti ti-building-store text-success fs-5"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-semibold"><?php echo $supplierCount; ?></h3>
+                <p class="text-muted mb-0">Suppliers</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="card hover-shadow">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="rounded-circle bg-warning-subtle p-3 d-flex align-items-center justify-content-center">
+                <i class="ti ti-user-circle text-warning fs-5"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-semibold"><?php echo $clientCount; ?></h3>
+                <p class="text-muted mb-0">Clients</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="card hover-shadow">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="rounded-circle bg-info-subtle p-3 d-flex align-items-center justify-content-center">
+                <i class="ti ti-package text-info fs-5"></i>
+              </div>
+              <div class="ms-3">
+                <h3 class="mb-0 fw-semibold"><?php echo $productCount; ?></h3>
+                <p class="text-muted mb-0">Products</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Revenue & Welcome Cards -->
+    <div class="row mt-4">
+      <div class="col-lg-8">
+        <div class="card">
+          <div class="card-header bg-transparent">
+            <div class="d-flex align-items-center">
+              <h5 class="mb-0 fw-semibold">Revenue Overview</h5>
+              <div class="ms-auto">
+                <select class="form-select form-select-sm">
+                  <option>Last 7 Days</option>
+                  <option>Last Month</option>
+                  <option>Last Year</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-4">
+            <div class="row align-items-center">
+              <div class="col-8">
+                <h4 class="fw-semibold mb-3">Total Revenue</h4>
+                <h2 class="fw-semibold mb-3">$<?php echo number_format($totalSales, 2); ?></h2>
+                <div class="d-flex align-items-center mb-3">
+                  <span class="me-2 rounded-circle bg-success-subtle p-1 d-flex align-items-center justify-content-center">
+                    <i class="ti ti-trending-up text-success fs-5"></i>
+                  </span>
+                  <p class="text-dark me-2 fs-3 mb-0">+9%</p>
+                  <p class="fs-3 mb-0">last year</p>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="d-flex justify-content-center">
+                  <div class="p-3 rounded-circle bg-primary-subtle">
+                    <i class="ti ti-currency-dollar text-primary fs-8"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card bg-primary text-white">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center">
+              <div>
+                <h5 class="fw-semibold mb-4">Quick Actions</h5>
+                <a href="user-management.php" class="btn btn-light mb-2 w-100">Manage Users</a>
+                <a href="products.php" class="btn btn-light mb-2 w-100">View Products</a>
+                <a href="featured-spots.php" class="btn btn-light w-100">Edit Featured Spots</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+    .hover-shadow {
+      transition: all 0.3s ease;
+    }
+    .hover-shadow:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .card {
+      border: none;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .bg-primary-subtle {
+      background-color: rgba(13,110,253,0.1);
+    }
+    .bg-success-subtle {
+      background-color: rgba(25,135,84,0.1);
+    }
+    .bg-warning-subtle {
+      background-color: rgba(255,193,7,0.1);
+    }
+    .bg-info-subtle {
+      background-color: rgba(13,202,240,0.1);
+    }
+    </style>
   </div>
 </div>
 <script src="../assets/libs/jquery/dist/jquery.min.js"></script>

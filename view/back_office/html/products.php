@@ -41,6 +41,11 @@ $currentUser = $authController->getCurrentUser();
   </style>
 </head>
 <body>
+<?php 
+require_once '../components/Sidebar.php';
+$sidebar = new Sidebar();
+echo $sidebar->render();
+?>
   <!-- Sidebar Start -->
   <aside class="left-sidebar">
     <div>

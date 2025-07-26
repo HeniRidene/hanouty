@@ -411,17 +411,17 @@ switch ($action) {
         
         // Initialize spot prices with defaults
         $spotPrices = [1=>100,2=>90,3=>80,4=>70,5=>60,6=>50,7=>40,8=>30,9=>20,10=>10];
-        // Get actual prices from database - get system supplier first
+        // Get system supplier first for default prices
         $stmt = $mysqli->query("SELECT s.user_id FROM supplier s JOIN users u ON s.user_id = u.id WHERE s.business_name = 'System Default'");
         if ($systemSupplier = $stmt->fetch_assoc()) {
             $systemSupplierId = $systemSupplier['user_id'];
             // Now get prices using system supplier ID
-            $spotPriceResult = $mysqli->prepare('SELECT spot_number, price_paid FROM featured_spots WHERE page_number=0 AND supplier_id=?');
-            $spotPriceResult->bind_param('i', $systemSupplierId);
+            $spotPriceResult = $mysqli->prepare('SELECT spot_number, price_paid FROM featured_spots WHERE page_number = ? AND supplier_id = ?');
+            $spotPriceResult->bind_param('ii', $featuredPage, $systemSupplierId);
             $spotPriceResult->execute();
             $result = $spotPriceResult->get_result();
             while ($row = $result->fetch_assoc()) {
-                $spotPrices[(int)$row['spot_number']] = (float)$row['price_paid'];
+                $spotPrices[(int)$row['spot_number']] = (int)$row['price_paid'];
             }
             $spotPriceResult->close();
         }
@@ -435,23 +435,41 @@ switch ($action) {
         // --- Fetch all spots for this page ---
         $spots = [];
         $now = date('Y-m-d H:i:s');
-        $stmt = $mysqli->prepare('SELECT fs.spot_number, fs.supplier_id, fs.product_id, fs.end_date, p.title, p.description, p.price, p.images FROM featured_spots fs LEFT JOIN products p ON fs.product_id = p.id WHERE fs.page_number = ? ORDER BY fs.spot_number, fs.end_date DESC');
-        $stmt->bind_param('i', $featuredPage);
+        
+        // First get all spots that are actually purchased (non-system supplier)
+        $stmt = $mysqli->prepare('SELECT fs.spot_number, fs.supplier_id, fs.product_id, fs.end_date, p.title, p.description, p.price, p.images 
+            FROM featured_spots fs 
+            LEFT JOIN products p ON fs.product_id = p.id 
+            WHERE fs.page_number = ? 
+            AND fs.supplier_id != ? 
+            AND fs.product_id IS NOT NULL
+            AND fs.end_date > ?
+            ORDER BY fs.spot_number, fs.end_date DESC');
+        $stmt->bind_param('iis', $featuredPage, $systemSupplierId, $now);
         $stmt->execute();
         $result = $stmt->get_result();
-        $seen = [];
         while ($row = $result->fetch_assoc()) {
             $spotNum = (int)$row['spot_number'];
-            // Only take the latest (by end_date) for each spot_number
-            if (!isset($seen[$spotNum])) {
-                // If end_date is in the past, treat as available
-                if (empty($row['end_date']) || $row['end_date'] > $now) {
-                    $spots[$spotNum] = $row;
-                }
-                $seen[$spotNum] = true;
-            }
+            $spots[$spotNum] = $row;
         }
         $stmt->close();
+
+        // For spots without a real purchase, add the system price
+        for ($i = 1; $i <= 10; $i++) {
+            if (!isset($spots[$i])) {
+                $spots[$i] = [
+                    'spot_number' => $i,
+                    'supplier_id' => null,
+                    'product_id' => null,
+                    'end_date' => null,
+                    'title' => null,
+                    'description' => null,
+                    'price' => null,
+                    'images' => null,
+                    'price_paid' => $spotPrices[$i] ?? null
+                ];
+            }
+        }
         
         // --- Also fetch regular suppliers for the main section ---
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
