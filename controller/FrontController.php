@@ -191,66 +191,63 @@ class FrontController {
             if (empty($data['title']) || empty($data['description']) || empty($data['price'])) {
                 return ['error' => 'Please fill in all required fields.'];
             }
-            
             // Validate price
             if (!is_numeric($data['price']) || $data['price'] <= 0) {
                 return ['error' => 'Please enter a valid price.'];
             }
-            
             // Handle image uploads
             $uploadedImages = [];
             if (!empty($files['images']['name'][0])) {
                 $uploadDir = $_SERVER['DOCUMENT_ROOT'] . '/hanouty/uploads/products/';
-                
-                // Create directory if it doesn't exist
                 if (!is_dir($uploadDir)) {
                     mkdir($uploadDir, 0755, true);
                 }
-                
                 foreach ($files['images']['tmp_name'] as $key => $tmpName) {
                     if ($files['images']['error'][$key] === UPLOAD_ERR_OK) {
                         $fileName = $files['images']['name'][$key];
                         $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-                        
-                        // Validate file type
                         $allowedTypes = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
                         if (!in_array($fileExtension, $allowedTypes)) {
                             return ['error' => 'Invalid file type. Only JPG, PNG, GIF, and WebP are allowed.'];
                         }
-                        
-                        // Generate unique filename
                         $uniqueName = uniqid() . '_' . time() . '.' . $fileExtension;
                         $filePath = $uploadDir . $uniqueName;
-                        
                         if (move_uploaded_file($tmpName, $filePath)) {
                             $uploadedImages[] = '/hanouty/uploads/products/' . $uniqueName;
                         }
                     }
                 }
             }
-            
+            // Handle selected existing images
+            $existingImages = [];
+            if (!empty($data['existing_images']) && is_array($data['existing_images'])) {
+                $userId = $_SESSION['user_id'];
+                foreach ($data['existing_images'] as $img) {
+                    // Only allow images that belong to this supplier
+                    if (preg_match('/^' . $userId . '_/', basename($img))) {
+                        $existingImages[] = '/hanouty/uploads/products/' . basename($img);
+                    }
+                }
+            }
+            // Combine new uploads and existing images
+            $allImages = array_merge($existingImages, $uploadedImages);
             // Prepare product data
             $productData = [
                 'title' => trim($data['title']),
                 'description' => trim($data['description']),
                 'price' => (float)$data['price'],
                 'category' => trim($data['category'] ?? ''),
-                'images' => !empty($uploadedImages) ? json_encode($uploadedImages) : null,
-                'supplier_id' => $_SESSION['user_id']
+                'images' => !empty($allImages) ? json_encode($allImages) : null,
+                'user_id' => $_SESSION['user_id'] // Use user_id for products table
             ];
-            
-            // Add product to database
             $productData['is_flash_sale'] = isset($data['is_flash_sale']) ? 1 : 0;
             $result = $this->productModel->addProduct($productData);
-            
             if ($result) {
                 return ['success' => 'Product added successfully!'];
             } else {
                 return ['error' => 'Failed to add product. Please try again.'];
             }
-            
         } catch (Exception $e) {
-            // Log the error for debugging
             error_log("Product addition error: " . $e->getMessage());
             return ['error' => 'An error occurred while adding the product: ' . $e->getMessage()];
         }

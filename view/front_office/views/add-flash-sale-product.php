@@ -6,6 +6,18 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'supplier') {
     header('Location: router.php');
     exit;
 }
+// Load supplier's uploaded images for selection
+$supplierImages = [];
+$userId = $_SESSION['user_id'];
+$dir = __DIR__ . '/../../../uploads/products/';
+if (is_dir($dir)) {
+    $files = scandir($dir);
+    foreach ($files as $file) {
+        if (preg_match('/^' . $userId . '_/', $file)) {
+            $supplierImages[] = $file;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -224,6 +236,24 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'supplier') {
                                 </div>
                                 <div id="imagePreview" class="image-preview"></div>
                             </div>
+                            <?php if (!empty($supplierImages)): ?>
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="bi-images me-1"></i>
+                                    Select from My Uploaded Images (Back Office)
+                                </label>
+                                <div class="row">
+                                    <?php foreach ($supplierImages as $img): ?>
+                                        <div class="col-3 mb-2 text-center">
+                                            <label style="cursor:pointer;">
+                                                <input type="checkbox" name="existing_images[]" value="<?= htmlspecialchars($img) ?>" style="margin-bottom:5px;">
+                                                <img src="/hanouty/uploads/products/<?= htmlspecialchars($img) ?>" class="img-fluid rounded" style="max-height:80px;">
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <input type="hidden" name="is_flash_sale" value="1">

@@ -128,10 +128,10 @@ class AuthController {
                         header('Location: index.php');
                         break;
                     case 'supplier':
-                        header('Location: supplier_dashboard.php');
+                        header('Location: supplier-dashboard.php');
                         break;
                     case 'client':
-                        header('Location: customer_dashboard.php');
+                        header('Location: index.php');
                         break;
                     default:
                         header('Location: index.php');
