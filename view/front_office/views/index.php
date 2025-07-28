@@ -226,6 +226,30 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
             .navbar .nav-link:hover { color: #fff !important; text-decoration: underline; }
             .navbar .btn-outline-dark { border-color: #fff; color: #fff; }
             .navbar .btn-outline-dark:hover { background: #fff; color: #198754; }
+            
+            /* Empty spot styles */
+            .empty-spot {
+                min-height: 200px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                padding: 2rem;
+                background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+                border: 2px dashed #dee2e6;
+                border-radius: 1rem;
+            }
+            
+            .owned-spot {
+                background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+                border: 2px solid #198754;
+            }
+            
+            .available-spot {
+                background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+                border: 2px dashed #dee2e6;
+            }
         </style>
     </head>
     <body>
@@ -334,13 +358,6 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
         </section>
         <?php endif; ?>
 
-        <!-- Suppliers Section -->
-        <?php /*
-        if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier') {
-            // Supplier grouping section removed as per user request
-        }
-        */ ?>
-
         <!-- Main Product Display: Spots for all, controls only for suppliers -->
         <section class="py-5">
             <div class="container px-4 px-lg-5">
@@ -348,7 +365,8 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                 <div class="featured-suppliers">
                     <?php for ($i = 1; $i <= 10; $i++): ?>
                         <div class="supplier-widget spot-<?= $i ?>">
-                            <?php if (isset($spots[$i]) && $spots[$i]['product_id']): ?>
+                            <?php if ($spots[$i]['has_product']): ?>
+                                <!-- Spot with product -->
                                 <?php 
                                 $productImages = [];
                                 if (!empty($spots[$i]['images'])) {
@@ -390,7 +408,7 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                                             <input type="hidden" name="quantity" value="1">
                                             <button type="submit" class="btn btn-success">Buy</button>
                                         </form>
-                                        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier' && $supplierId == $spots[$i]['supplier_id']): ?>
+                                        <?php if ($spots[$i]['owned_by_current_user']): ?>
                                             <a href="router.php?action=edit-product&id=<?= $spots[$i]['product_id'] ?>&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-warning px-3 py-2 fw-bold" title="Modify Offer">
                                                 <i class="bi bi-pencil-square"></i>
                                             </a>
@@ -400,20 +418,48 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                            <?php else: ?>
-                                <!-- If spot is empty, show nothing for clients/guests, or controls for suppliers -->
-                                <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier'): ?>
-                                    <h3>Spot n°<?= $i ?></h3>
-                                    <?php if (isset($spots[$i]['supplier_id']) && $spots[$i]['supplier_id'] == $supplierId && empty($spots[$i]['product_id'])): ?>
-                                        <button class="btn" disabled>Spot Owned</button>
-                                        <a href="router.php?action=add-product&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-success ms-2">Add Product</a>
-                                    <?php elseif (isset($spots[$i]['supplier_id']) && $spots[$i]['supplier_id'] != $supplierId): ?>
-                                        <button class="btn btn-secondary" disabled>Can't purchase this spot</button>
-                                    <?php else: ?>
-                                        <a href="#" class="btn buy-spot-btn" data-spot="<?= $i ?>" data-page="<?= $featuredPage ?>">
-                                            Buy this spot for <?= $spotPrices[$i] ?> DT
+                            <?php elseif ($spots[$i]['supplier_id'] && !$spots[$i]['has_product']): ?>
+                                <!-- Spot owned but no product -->
+                                <?php if ($spots[$i]['owned_by_current_user']): ?>
+                                    <div class="empty-spot owned-spot">
+                                        <h3 class="text-success mb-3">Spot n°<?= $i ?> - Your Spot</h3>
+                                        <i class="bi-plus-circle display-4 text-success mb-3"></i>
+                                        <p class="text-muted mb-3">You own this spot. Add your product to start selling!</p>
+                                        <a href="router.php?action=add-product&featured_page=<?= $featuredPage ?>&spot=<?= $i ?>" class="btn btn-success btn-lg">
+                                            <i class="bi-plus-circle me-2"></i>
+                                            Add Product
                                         </a>
-                                    <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="empty-spot">
+                                        <h3 class="text-muted mb-3">Spot n°<?= $i ?></h3>
+                                        <i class="bi-lock display-4 text-muted mb-3"></i>
+                                        <p class="text-muted mb-3">This spot is owned by another supplier</p>
+                                        <button class="btn btn-secondary" disabled>
+                                            <i class="bi-lock me-2"></i>
+                                            Not Available
+                                        </button>
+                                    </div>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <!-- Available spot -->
+                                <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier'): ?>
+                                    <div class="empty-spot available-spot">
+                                        <h3 class="text-primary mb-3">Spot n°<?= $i ?> - Available</h3>
+                                        <i class="bi-shop display-4 text-primary mb-3"></i>
+                                        <p class="text-muted mb-3">Price: <strong><?= $spots[$i]['price_paid'] ?? $spotPrices[$i] ?? 0 ?> DT</strong></p>
+                                        <button class="btn btn-primary btn-lg buy-spot-btn" data-spot="<?= $i ?>" data-page="<?= $featuredPage ?>">
+                                            <i class="bi-cart-plus me-2"></i>
+                                            Buy This Spot
+                                        </button>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="empty-spot available-spot">
+                                        <h3 class="text-primary mb-3">Spot n°<?= $i ?> - Available</h3>
+                                        <i class="bi-shop display-4 text-primary mb-3"></i>
+                                        <p class="text-muted mb-3">Price: <strong><?= $spots[$i]['price_paid'] ?? $spotPrices[$i] ?? 0 ?> DT</strong></p>
+                                        <p class="text-muted small">Login as a supplier to purchase this spot</p>
+                                    </div>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </div>
@@ -422,8 +468,7 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                 <!-- Pagination -->
                 <nav aria-label="Featured spots pagination" class="mt-4">
                     <ul class="pagination justify-content-center custom-featured-pagination">
-                        <?php for (
-                            $p = 1; $p <= $totalPages; $p++): ?>
+                        <?php for ($p = 1; $p <= $totalPages; $p++): ?>
                             <li class="page-item<?= $p == $featuredPage ? ' active' : '' ?>">
                                 <?php if ($p == $featuredPage): ?>
                                     <span class="page-link">Page <?= $p ?></span>
@@ -490,89 +535,88 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
         <script src="js/scripts.js"></script>
         
         <script>
-            // Remove login modal and showLoginModal() JS
-        </script>
-
-        <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Handle spot purchasing
             document.querySelectorAll('.buy-spot-btn').forEach(function(btn) {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     var spot = this.getAttribute('data-spot');
                     var page = this.getAttribute('data-page');
                     var button = this;
-                    fetch('buy_spot.php?featured_page=' + page + '&spot=' + spot)
-                        .then(response => response.text())
-                        .then(data => {
-                            if (data === 'success') {
-                                // Create a wrapper div for the new buttons
-                                var wrapper = document.createElement('div');
-                                wrapper.style.display = 'inline-block';
-                                // Spot Owned button
-                                var ownedBtn = document.createElement('button');
-                                ownedBtn.className = 'btn';
-                                ownedBtn.disabled = true;
-                                ownedBtn.textContent = 'Spot Owned';
-                                // Add Product button
-                                var addBtn = document.createElement('a');
-                                addBtn.href = 'router.php?action=add-product&featured_page=' + page + '&spot=' + spot;
-                                addBtn.className = 'btn btn-success ms-2';
-                                addBtn.textContent = 'Add Product';
-                                // Add both to wrapper
-                                wrapper.appendChild(ownedBtn);
-                                wrapper.appendChild(addBtn);
-                                // Replace the original button with the wrapper
-                                button.parentNode.replaceChild(wrapper, button);
-                            } else if (data === 'spot_taken') {
-                                button.outerHTML = '<button class="btn" disabled>Spot Owned</button>';
-                            }
-                        });
+                    var originalText = button.innerHTML;
+                    button.innerHTML = '<i class="spinner-border spinner-border-sm me-2"></i>Processing...';
+                    button.disabled = true;
+                    fetch('buy_spot.php?featured_page=' + page + '&spot=' + spot, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success && result.redirect) {
+                            window.location.href = result.redirect;
+                        } else if (result.error) {
+                            alert(result.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error purchasing spot. Please try again.');
+                    })
+                    .finally(() => {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    });
                 });
             });
+            
+            // Login modal functionality
+            window.showLoginModal = function() {
+                var loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                loginModal.show();
+            }
+            
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    document.getElementById('loginError').classList.add('d-none');
+                    const formData = new FormData(this);
+                    fetch('router.php?action=login', {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            var modalEl = document.getElementById('loginModal');
+                            var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+                            modalInstance.hide();
+                            setTimeout(function() {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            document.getElementById('loginError').textContent = data.error || 'Login failed.';
+                            document.getElementById('loginError').classList.remove('d-none');
+                        }
+                    })
+                    .catch((err) => {
+                        document.getElementById('loginError').textContent = 'Network error. Please try again.';
+                        document.getElementById('loginError').classList.remove('d-none');
+                        console.error('Login AJAX error:', err);
+                    });
+                });
+            }
         });
-        </script>
-        
-        <script>
-        document.addEventListener('DOMContentLoaded', function() {
-          window.showLoginModal = function() {
-            var loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            loginModal.show();
-          }
-          const loginForm = document.getElementById('loginForm');
-          if (loginForm) {
-            loginForm.addEventListener('submit', function(e) {
-              e.preventDefault();
-              document.getElementById('loginError').classList.add('d-none');
-              const formData = new FormData(this);
-              fetch('router.php?action=login', {
-                method: 'POST',
-                body: formData,
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-              })
-              .then(res => res.json())
-              .then(data => {
-                if (data.success) {
-                  // Hide modal and reload after a short delay
-                  var modalEl = document.getElementById('loginModal');
-                  var modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
-                  modalInstance.hide();
-                  setTimeout(function() {
-                    window.location.reload();
-                  }, 500);
-                } else {
-                  document.getElementById('loginError').textContent = data.error || 'Login failed.';
-                  document.getElementById('loginError').classList.remove('d-none');
-                }
-              })
-              .catch((err) => {
-                document.getElementById('loginError').textContent = 'Network error. Please try again.';
-                document.getElementById('loginError').classList.remove('d-none');
-                console.error('Login AJAX error:', err);
-              });
-            });
-          }
-        });
+
+        // Use spotPrices from PHP for accurate prices
+        const spotPrices = <?php echo json_encode($spotPrices, JSON_NUMERIC_CHECK); ?>;
+        function getSpotPrice(spot) {
+            return spotPrices[spot] || 0;
+        }
         </script>
         
     </body>
-</html> 
+</html>

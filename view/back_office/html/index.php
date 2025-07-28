@@ -5,7 +5,7 @@ require_once '../../../model/Product.php';
 $authController = new AuthController();
 $userController = new UserController();
 $productModel = new Product();
-if (!$authController->isLoggedIn() || !$authController->isAdmin()) {
+if (!$authController->isLoggedIn() || !($authController->isAdmin() || $authController->isSupplier())) {
     header('Location: authentication-login.php');
     exit();
 }

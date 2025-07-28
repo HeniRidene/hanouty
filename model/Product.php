@@ -110,15 +110,14 @@ class Product {
             $stmt->bindParam(':price', $data['price']);
             $stmt->bindParam(':category', $data['category']);
             $stmt->bindParam(':images', $data['images']);
-            $stmt->bindParam(':user_id', $data['supplier_id']);
+            $stmt->bindParam(':user_id', $data['user_id']); // Fix: use user_id
             $stmt->bindParam(':is_flash_sale', $data['is_flash_sale']);
-            
             $result = $stmt->execute();
             if (!$result) {
                 $errorInfo = $stmt->errorInfo();
                 throw new Exception("Database error: " . $errorInfo[2]);
             }
-            return $result;
+            return $this->pdo->lastInsertId(); // Return the inserted product ID
         } catch (PDOException $e) {
             throw new Exception("Error adding product: " . $e->getMessage());
         }

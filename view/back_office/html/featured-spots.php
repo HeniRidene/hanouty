@@ -30,6 +30,12 @@ function ensureSystemSupplier($pdo) {
     return $systemSupplierId;
 }
 
+// Function to get system supplier user_id (for use as supplier_id in featured_spots)
+function getSystemSupplierUserId($pdo) {
+    $stmt = $pdo->query("SELECT s.user_id FROM supplier s JOIN users u ON s.user_id = u.id WHERE s.business_name = 'System Default'");
+    return $stmt->fetch(PDO::FETCH_COLUMN);
+}
+
 // Initialize spot prices with defaults
 $spotPrices = [1=>100, 2=>90, 3=>80, 4=>70, 5=>60, 6=>50, 7=>40, 8=>30, 9=>20, 10=>10];
 
@@ -63,29 +69,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         
         $page = isset($_POST['page_number']) ? (int)$_POST['page_number'] : 1;
         
+        // Ensure system supplier exists and get supplier.user_id
+        ensureSystemSupplier($pdo);
+        $systemSupplierId = getSystemSupplierUserId($pdo);
+        
+        if (!$systemSupplierId) {
+            throw new Exception('Could not retrieve system supplier ID');
+        }
+        
         foreach ($spotPrices as $spot => $price) {
             $spot = (int)$spot;
             $price = (int)$price;
             $now = date('Y-m-d H:i:s');
-            $forever = '2099-12-31 23:59:59';
+            $forever = '2099-12-31 23:59:59'; // Special end date for price configuration records
             
-            $systemSupplierId = ensureSystemSupplier($pdo);
+            // Delete existing price configuration record for this spot/page
+            $stmt = $pdo->prepare('DELETE FROM featured_spots WHERE page_number = ? AND spot_number = ? AND supplier_id = ? AND end_date = "2099-12-31 23:59:59"');
+            $stmt->execute([$page, $spot, $systemSupplierId]);
             
-            $stmt = $pdo->prepare('REPLACE INTO featured_spots (page_number, spot_number, supplier_id, start_date, end_date, price_paid) VALUES (:page, :spot, :supplier_id, :start_date, :end_date, :price)');
-            $stmt->execute([
-                ':page' => $page,
-                ':spot' => $spot,
-                ':supplier_id' => $systemSupplierId,
-                ':start_date' => $now,
-                ':end_date' => $forever,
-                ':price' => $price
-            ]);
+            // Insert new price configuration record
+            $stmt = $pdo->prepare('INSERT INTO featured_spots (page_number, spot_number, supplier_id, start_date, end_date, price_paid) VALUES (?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$page, $spot, $systemSupplierId, $now, $forever, $price]);
         }
         
         $message = 'Spot prices updated successfully!';
         $messageType = 'success';
     } catch (PDOException $e) {
         $message = 'Error updating spot prices: ' . $e->getMessage();
+        $messageType = 'danger';
+    } catch (Exception $e) {
+        $message = 'Error: ' . $e->getMessage();
         $messageType = 'danger';
     }
 }
@@ -95,15 +108,23 @@ try {
     $pdo = new PDO('mysql:host=localhost;dbname=hanouty', 'root', '');
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
-    $systemSupplierId = ensureSystemSupplier($pdo);
+    // Ensure system supplier exists and get supplier.user_id
+    ensureSystemSupplier($pdo);
+    $systemSupplierId = getSystemSupplierUserId($pdo);
     
-    $stmt = $pdo->prepare('SELECT spot_number, price_paid FROM featured_spots WHERE page_number = ? AND supplier_id = ? ORDER BY spot_number');
-    $stmt->execute([$currentPricePage, $systemSupplierId]);
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $spotPrices[(int)$row['spot_number']] = (float)$row['price_paid'];
+    if ($systemSupplierId) {
+        // Get price configuration records (those with end_date = "2099-12-31 23:59:59")
+        $stmt = $pdo->prepare('SELECT spot_number, price_paid FROM featured_spots WHERE page_number = ? AND supplier_id = ? AND end_date = "2099-12-31 23:59:59" ORDER BY spot_number');
+        $stmt->execute([$currentPricePage, $systemSupplierId]);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $spotPrices[(int)$row['spot_number']] = (float)$row['price_paid'];
+        }
     }
 } catch(PDOException $e) {
     $message = "Database error: " . $e->getMessage();
+    $messageType = 'danger';
+} catch (Exception $e) {
+    $message = "Error: " . $e->getMessage();
     $messageType = 'danger';
 }
 
@@ -142,6 +163,18 @@ $sidebar = new Sidebar();
     }
     .btn-group .btn {
       min-width: 100px;
+    }
+    .info-alert {
+      background-color: #e3f2fd;
+      border: 1px solid #90caf9;
+      color: #1565c0;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    .info-alert h6 {
+      color: #0d47a1;
+      margin-bottom: 8px;
     }
   </style>
 </head>
@@ -191,8 +224,17 @@ $sidebar = new Sidebar();
               <?php echo htmlspecialchars($message); ?>
             </div>
             <?php endif; ?>
+            
+            <div class="info-alert">
+              <h6><i class="ti ti-info-circle me-2"></i>Featured Spots Configuration</h6>
+              <p class="mb-0">
+                This panel allows you to set the prices for featured spots on each page. These prices will be charged when suppliers purchase spots.
+                Price changes only affect new purchases - existing active spots retain their original price.
+              </p>
+            </div>
+            
             <div class="d-flex justify-content-between align-items-center mb-4">
-              <h5 class="card-title fw-semibold mb-0">Spots Configuration</h5>
+              <h5 class="card-title fw-semibold mb-0">Spots Configuration - Page <?php echo $currentPricePage; ?></h5>
               <div class="btn-group" role="group">
                 <?php 
                 $totalPages = 3; // We have 3 pages of prices
