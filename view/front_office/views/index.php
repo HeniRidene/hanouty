@@ -250,6 +250,44 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                 background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
                 border: 2px dashed #dee2e6;
             }
+            .product-list-card {
+                min-height: 180px;
+                display: flex;
+                align-items: stretch;
+                border: 1px solid #eee;
+                border-radius: 8px;
+                margin-bottom: 1.5rem;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+                overflow: hidden;
+            }
+            .product-list-img {
+                width: 220px;
+                height: 180px;
+                object-fit: cover;
+                background: #f8f9fa;
+                display: block;
+            }
+            .product-list-body {
+                flex: 1;
+                padding: 1.5rem 1.5rem 1.5rem 1rem;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            .product-list-title {
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+            }
+            .product-list-price {
+                color: #198754;
+                font-weight: bold;
+                font-size: 1.1rem;
+                margin-bottom: 0.5rem;
+            }
+            .product-list-btns {
+                margin-top: 0.5rem;
+            }
         </style>
     </head>
     <body>
@@ -358,6 +396,7 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
         </section>
         <?php endif; ?>
 
+        <?php if (isset($userRole) && $userRole === 'supplier'): ?>
         <!-- Main Product Display: Spots for all, controls only for suppliers -->
         <section class="py-5">
             <div class="container px-4 px-lg-5">
@@ -481,6 +520,75 @@ $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
                 </nav>
             </div>
         </section>
+        <?php else: ?>
+    <!-- Render a beautiful featured card list for guests/clients, same as supplier view -->
+    <div class="container py-5">
+        <h2 class="mb-4">Featured Products</h2>
+        <?php if (!empty($simpleProducts)): ?>
+            <?php foreach ($simpleProducts as $idx => $product): ?>
+                <div class="featured-spot-product p-4 d-flex flex-column flex-md-row align-items-center gap-4 mb-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 1rem; box-shadow: 0 6px 24px rgba(25,135,84,0.08);">
+                    <?php $images = $product['images'] ? json_decode($product['images'], true) : []; ?>
+                    <?php if (!empty($images)): ?>
+                        <?php $carouselId = 'guest-carousel-' . $product['id'] . '-' . $idx; ?>
+                        <div id="<?= $carouselId ?>" class="carousel slide flex-shrink-0" data-bs-ride="carousel" style="width: 340px; max-width: 100%;">
+                            <div class="carousel-inner rounded-3 shadow">
+                                <?php foreach ($images as $imgIdx => $img): ?>
+                                    <div class="carousel-item<?= $imgIdx === 0 ? ' active' : '' ?>">
+                                        <img src="<?= htmlspecialchars($img) ?>" class="d-block w-100" style="height: 260px; object-fit: cover; border-radius: 1rem;" alt="Product Image <?= $imgIdx + 1 ?>">
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php if (count($images) > 1): ?>
+                                <button class="carousel-control-prev" type="button" data-bs-target="#<?= $carouselId ?>" data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                    <span class="visually-hidden">Previous</span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#<?= $carouselId ?>" data-bs-slide="next">
+                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                    <span class="visually-hidden">Next</span>
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    <?php else: ?>
+                        <img src="https://dummyimage.com/450x300/dee2e6/6c757d.jpg" class="d-block w-100" style="width:340px; height:260px; object-fit:cover; border-radius:1rem;" alt="No Image">
+                    <?php endif; ?>
+                    <div class="flex-grow-1">
+                        <h3 class="fw-bold mb-2" style="font-size: 2rem; color: #198754; letter-spacing: -1px;">
+                            <?= htmlspecialchars($product['title']) ?>
+                        </h3>
+                        <p class="mb-2" style="font-size: 1.1rem; color: #444; min-height: 32px;"> <?= htmlspecialchars($product['description']) ?> </p>
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="fs-4 fw-bold text-success me-3"><?= htmlspecialchars(number_format($product['price'], 2)) ?> DT</span>
+                        </div>
+                        <div class="product-list-btns">
+                            <a href="router.php?action=product&id=<?= $product['id'] ?>" class="btn btn-outline-dark btn-lg">View Details</a>
+                            <form method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" style="display:inline-block; margin-left:8px;">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-success btn-lg">Buy</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div class="alert alert-info">No featured products available at the moment.</div>
+        <?php endif; ?>
+        <!-- Pagination -->
+        <nav aria-label="Featured spots pagination" class="mt-4">
+            <ul class="pagination justify-content-center custom-featured-pagination">
+                <?php for ($p = 1; $p <= $totalPages; $p++): ?>
+                    <li class="page-item<?= $p == $featuredPage ? ' active' : '' ?>">
+                        <?php if ($p == $featuredPage): ?>
+                            <span class="page-link">Page <?= $p ?></span>
+                        <?php else: ?>
+                            <a class="page-link" href="router.php?featured_page=<?= $p ?>">Page <?= $p ?></a>
+                        <?php endif; ?>
+                    </li>
+                <?php endfor; ?>
+            </ul>
+        </nav>
+    </div>
+<?php endif; ?>
 
         <!-- Footer-->
         <footer class="py-5 bg-dark">

@@ -47,6 +47,7 @@ $stmt->close();
     </style>
 </head>
 <body>
+<?php if (isset($userRole) && $userRole === 'supplier'): ?>
     <h2>Featured Product Spots</h2>
     <div class="featured-products">
         <?php for ($i = 1; $i <= 10; $i++): ?>
@@ -106,5 +107,33 @@ $stmt->close();
         });
     });
     </script>
+<?php else: ?>
+    <!-- Render a simple product list for guests/clients -->
+    <div class="container py-5">
+        <h2 class="mb-4">Featured Products</h2>
+        <div class="row">
+            <?php if (!empty($simpleProducts)): ?>
+                <?php foreach ($simpleProducts as $product): ?>
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100">
+                            <?php $images = $product['images'] ? json_decode($product['images'], true) : []; ?>
+                            <img src="<?= !empty($images) ? htmlspecialchars($images[0]) : 'https://dummyimage.com/450x300/dee2e6/6c757d.jpg' ?>" class="card-img-top" alt="<?= htmlspecialchars($product['title']) ?>">
+                            <div class="card-body">
+                                <h5 class="card-title"><?= htmlspecialchars($product['title']) ?></h5>
+                                <p class="card-text"><?= htmlspecialchars($product['description']) ?></p>
+                                <div class="fw-bold text-success mb-2"><?= number_format($product['price'], 2) ?> DT</div>
+                                <a href="router.php?action=product&id=<?= $product['id'] ?>" class="btn btn-outline-dark">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="col-12">
+                    <div class="alert alert-info">No featured products available at the moment.</div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+<?php endif; ?>
 </body>
 </html> 

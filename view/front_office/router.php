@@ -496,6 +496,24 @@ switch ($action) {
         echo json_encode(['count' => $count]);
         exit;
         
+    case 'supplier-products':
+        $supplierId = $_GET['id'] ?? null;
+        if ($supplierId) {
+            $data = $controller->getSupplier($supplierId);
+            if ($data) {
+                $supplier = $data['supplier'];
+                $products = $data['products'];
+                include 'views/supplier-products.php';
+            } else {
+                header('Location: index.php');
+                exit;
+            }
+        } else {
+            header('Location: index.php');
+            exit;
+        }
+        break;
+        
     default:
         // --- DB CONNECTION ---
         try {
@@ -508,131 +526,145 @@ switch ($action) {
             $userRole = (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'supplier') ? 'supplier' : null;
             $userSupplierId = $_SESSION['user_id'] ?? null; // This is users.id
             $featuredPage = isset($_GET['featured_page']) ? (int)$_GET['featured_page'] : 1;
-
-            // Ensure supplier record exists if user is a supplier
-            if ($userRole === 'supplier' && $userSupplierId) {
-                $supplierStmt = $mysqli->prepare("SELECT user_id FROM supplier WHERE user_id = ?");
-                $supplierStmt->bind_param('i', $userSupplierId);
-                $supplierStmt->execute();
-                $supplierResult = $supplierStmt->get_result();
-                if (!$supplierResult->fetch_assoc()) {
-                    // Create supplier record if it doesn't exist
-                    $userNameStmt = $mysqli->prepare("SELECT name FROM users WHERE id = ?");
-                    $userNameStmt->bind_param('i', $userSupplierId);
-                    $userNameStmt->execute();
-                    $userNameResult = $userNameStmt->get_result();
-                    $businessName = 'Supplier Business';
-                    if ($userNameRow = $userNameResult->fetch_assoc()) {
-                        $businessName = $userNameRow['name'] . ' Business';
-                    }
-                    $userNameStmt->close();
-                    
-                    $createStmt = $mysqli->prepare("INSERT INTO supplier (user_id, business_name, bio) VALUES (?, ?, ?)");
-                    $defaultBio = 'New supplier';
-                    $createStmt->bind_param('iss', $userSupplierId, $businessName, $defaultBio);
-                    $createStmt->execute();
-                    $createStmt->close();
-                }
-                $supplierStmt->close();
-            }
-
-            // Get system supplier user_id for price management
-            $systemSupplierId = null;
-            $systemStmt = $mysqli->query("SELECT user_id FROM supplier WHERE business_name = 'System Default'");
-            if ($systemStmt && $systemSupplier = $systemStmt->fetch_assoc()) {
-                $systemSupplierId = $systemSupplier['user_id']; // Use user_id, not id
-            }
-
-            // Initialize spot prices with defaults (will be overwritten by DB values below)
-            $spotPrices = [1=>0,2=>0,3=>0,4=>0,5=>0,6=>0,7=>0,8=>0,9=>0,10=>0];
-
-            // Get current prices from system price configuration records (end_date = "2099-12-31 23:59:59")
-            if ($systemSupplierId) {
-                $priceStmt = $mysqli->prepare('SELECT spot_number, price_paid FROM featured_spots WHERE page_number = ? AND supplier_id = ? AND end_date = "2099-12-31 23:59:59"');
-                $priceStmt->bind_param('ii', $featuredPage, $systemSupplierId);
-                $priceStmt->execute();
-                $priceResult = $priceStmt->get_result();
-                while ($row = $priceResult->fetch_assoc()) {
-                    $spotPrices[(int)$row['spot_number']] = (int)$row['price_paid'];
-                }
-                $priceStmt->close();
-            }
-
             // --- Pagination: count total pages ---
             $res = $mysqli->query('SELECT MAX(page_number) as max_page FROM featured_spots');
             $row = $res->fetch_assoc();
             $minPages = 3;
             $totalPages = max($minPages, (int)($row['max_page'] ?? 1));
 
-            // --- Initialize all spots as empty/available first ---
-            $spots = [];
-            for ($i = 1; $i <= 10; $i++) {
-                $spots[$i] = [
-                    'spot_number' => $i,
-                    'supplier_id' => null,
-                    'product_id' => null,
-                    'end_date' => null,
-                    'title' => null,
-                    'description' => null,
-                    'price' => null,
-                    'images' => null,
-                    'price_paid' => $spotPrices[$i],
-                    'owned_by_current_user' => false,
-                    'has_product' => false
-                ];
-            }
+            if ($userRole === 'supplier') {
+                // Ensure supplier record exists if user is a supplier
+                if ($userSupplierId) {
+                    $supplierStmt = $mysqli->prepare("SELECT user_id FROM supplier WHERE user_id = ?");
+                    $supplierStmt->bind_param('i', $userSupplierId);
+                    $supplierStmt->execute();
+                    $supplierResult = $supplierStmt->get_result();
+                    if (!$supplierResult->fetch_assoc()) {
+                        // Create supplier record if it doesn't exist
+                        $userNameStmt = $mysqli->prepare("SELECT name FROM users WHERE id = ?");
+                        $userNameStmt->bind_param('i', $userSupplierId);
+                        $userNameStmt->execute();
+                        $userNameResult = $userNameStmt->get_result();
+                        $businessName = 'Supplier Business';
+                        if ($userNameRow = $userNameResult->fetch_assoc()) {
+                            $businessName = $userNameRow['name'] . ' Business';
+                        }
+                        $userNameStmt->close();
+                        
+                        $createStmt = $mysqli->prepare("INSERT INTO supplier (user_id, business_name, bio) VALUES (?, ?, ?)");
+                        $defaultBio = 'New supplier';
+                        $createStmt->bind_param('iss', $userSupplierId, $businessName, $defaultBio);
+                        $createStmt->execute();
+                        $createStmt->close();
+                    }
+                    $supplierStmt->close();
+                }
 
-            // --- Now fetch ACTIVE spots (purchased by suppliers, excluding price configuration records) ---
-            $now = date('Y-m-d H:i:s');
+                // Get system supplier user_id for price management
+                $systemSupplierId = null;
+                $systemStmt = $mysqli->query("SELECT user_id FROM supplier WHERE business_name = 'System Default'");
+                if ($systemStmt && $systemSupplier = $systemStmt->fetch_assoc()) {
+                    $systemSupplierId = $systemSupplier['user_id']; // Use user_id, not id
+                }
 
-            // Get active spots - exclude system price configuration records
-            $stmt = $mysqli->prepare('SELECT fs.spot_number, fs.supplier_id, fs.product_id, fs.end_date, fs.price_paid, p.title, p.description, p.price, p.images 
-                FROM featured_spots fs 
-                LEFT JOIN products p ON fs.product_id = p.id 
-                WHERE fs.page_number = ? 
-                AND fs.end_date > ?
-                AND fs.end_date != "2099-12-31 23:59:59"
-                AND fs.supplier_id IS NOT NULL
-                ORDER BY fs.spot_number');
-            $stmt->bind_param('is', $featuredPage, $now);
+                // Initialize spot prices with defaults (will be overwritten by DB values below)
+                $spotPrices = [1=>0,2=>0,3=>0,4=>0,5=>0,6=>0,7=>0,8=>0,9=>0,10=>0];
 
-            $stmt->execute();
-            $result = $stmt->get_result();
+                // Get current prices from system price configuration records (end_date = "2099-12-31 23:59:59")
+                if ($systemSupplierId) {
+                    $priceStmt = $mysqli->prepare('SELECT spot_number, price_paid FROM featured_spots WHERE page_number = ? AND supplier_id = ? AND end_date = "2099-12-31 23:59:59"');
+                    $priceStmt->bind_param('ii', $featuredPage, $systemSupplierId);
+                    $priceStmt->execute();
+                    $priceResult = $priceStmt->get_result();
+                    while ($row = $priceResult->fetch_assoc()) {
+                        $spotPrices[(int)$row['spot_number']] = (int)$row['price_paid'];
+                    }
+                    $priceStmt->close();
+                }
 
-            while ($row = $result->fetch_assoc()) {
-                $spotNum = (int)$row['spot_number'];
-                if ($spotNum >= 1 && $spotNum <= 10) {
-                    $spots[$spotNum] = [
-                        'spot_number' => $spotNum,
-                        'supplier_id' => $row['supplier_id'],
-                        'product_id' => $row['product_id'],
-                        'end_date' => $row['end_date'],
-                        'title' => $row['title'],
-                        'description' => $row['description'],
-                        'price' => $row['price'],
-                        'images' => $row['images'],
-                        'price_paid' => $row['price_paid'] ?: $spotPrices[$spotNum],
-                        // Compare with userSupplierId instead of supplierRecordId since we're using user_id
-                        'owned_by_current_user' => ($userRole === 'supplier' && $row['supplier_id'] == $userSupplierId),
-                        'has_product' => !empty($row['product_id'])
+                // --- Initialize all spots as empty/available first ---
+                $spots = [];
+                for ($i = 1; $i <= 10; $i++) {
+                    $spots[$i] = [
+                        'spot_number' => $i,
+                        'supplier_id' => null,
+                        'product_id' => null,
+                        'end_date' => null,
+                        'title' => null,
+                        'description' => null,
+                        'price' => null,
+                        'images' => null,
+                        'price_paid' => $spotPrices[$i],
+                        'owned_by_current_user' => false,
+                        'has_product' => false
                     ];
                 }
+
+                // --- Now fetch ACTIVE spots (purchased by suppliers, excluding price configuration records) ---
+                $now = date('Y-m-d H:i:s');
+
+                // Get active spots - exclude system price configuration records
+                $stmt = $mysqli->prepare('SELECT fs.spot_number, fs.supplier_id, fs.product_id, fs.end_date, fs.price_paid, p.title, p.description, p.price, p.images 
+                    FROM featured_spots fs 
+                    LEFT JOIN products p ON fs.product_id = p.id 
+                    WHERE fs.page_number = ? 
+                    AND fs.end_date > ?
+                    AND fs.end_date != "2099-12-31 23:59:59"
+                    AND fs.supplier_id IS NOT NULL
+                    ORDER BY fs.spot_number');
+                $stmt->bind_param('is', $featuredPage, $now);
+
+                $stmt->execute();
+                $result = $stmt->get_result();
+
+                while ($row = $result->fetch_assoc()) {
+                    $spotNum = (int)$row['spot_number'];
+                    if ($spotNum >= 1 && $spotNum <= 10) {
+                        $spots[$spotNum] = [
+                            'spot_number' => $spotNum,
+                            'supplier_id' => $row['supplier_id'],
+                            'product_id' => $row['product_id'],
+                            'end_date' => $row['end_date'],
+                            'title' => $row['title'],
+                            'description' => $row['description'],
+                            'price' => $row['price'],
+                            'images' => $row['images'],
+                            'price_paid' => $row['price_paid'] ?: $spotPrices[$spotNum],
+                            // Compare with userSupplierId instead of supplierRecordId since we're using user_id
+                            'owned_by_current_user' => ($userRole === 'supplier' && $row['supplier_id'] == $userSupplierId),
+                            'has_product' => !empty($row['product_id'])
+                        ];
+                    }
+                }
+                $stmt->close();
+
+                // --- Also fetch regular suppliers for the main section ---
+                $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+                $suppliersData = $controller->getSuppliers($page, 10);
+                $suppliers = $suppliersData['suppliers'];
+                $pagination = $suppliersData['pagination'];
+                $searchTerm = $_GET['search'] ?? '';
+                $searchResults = [];
+
+                if ($searchTerm) {
+                    $searchResults = $controller->searchProducts($searchTerm);
+                }
+
+                $mysqli->close();
+                
+            } else {
+                // For guests/clients: fetch a simple product list for this page
+                $simpleProducts = [];
+                $now = date('Y-m-d H:i:s');
+                $stmt = $mysqli->prepare('SELECT p.* FROM featured_spots fs LEFT JOIN products p ON fs.product_id = p.id WHERE fs.page_number = ? AND fs.end_date > ? AND fs.end_date != "2099-12-31 23:59:59" AND fs.product_id IS NOT NULL ORDER BY fs.spot_number');
+                $stmt->bind_param('is', $featuredPage, $now);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                while ($row = $result->fetch_assoc()) {
+                    $simpleProducts[] = $row;
+                }
+                $stmt->close();
             }
-            $stmt->close();
-
-            // --- Also fetch regular suppliers for the main section ---
-            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-            $suppliersData = $controller->getSuppliers($page, 10);
-            $suppliers = $suppliersData['suppliers'];
-            $pagination = $suppliersData['pagination'];
-            $searchTerm = $_GET['search'] ?? '';
-            $searchResults = [];
-
-            if ($searchTerm) {
-                $searchResults = $controller->searchProducts($searchTerm);
-            }
-
-            $mysqli->close();
             
         } catch (Exception $e) {
             error_log("Error in default case: " . $e->getMessage());

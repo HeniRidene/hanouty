@@ -105,7 +105,11 @@ if (session_status() === PHP_SESSION_NONE) {
                                 <?php
                                 $supplierDisplayName = !empty($product['business_name']) ? $product['business_name'] : (!empty($product['supplier_name']) ? $product['supplier_name'] : 'Unknown Supplier');
                                 ?>
-                                <div class="fw-bold">Supplier: <?= htmlspecialchars($supplierDisplayName) ?></div>
+                                <div class="fw-bold">Supplier: 
+                                    <a href="router.php?action=supplier-products&id=<?= htmlspecialchars($product['user_id']) ?>" class="text-success text-decoration-underline">
+                                        <?= htmlspecialchars($supplierDisplayName) ?>
+                                    </a>
+                                </div>
                                 <?php if (!empty($product['bio'])): ?>
                                     <small class="text-muted"><?= htmlspecialchars($product['bio']) ?></small>
                                 <?php endif; ?>
