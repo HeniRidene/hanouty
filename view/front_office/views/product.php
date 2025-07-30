@@ -116,12 +116,14 @@ if (session_status() === PHP_SESSION_NONE) {
                             </div>
                         </div>
                     </div>
-                    <form id="buy-form" method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" class="mt-4">
-                        <div class="input-group mb-3" style="max-width: 200px;">
-                            <input type="number" name="quantity" class="form-control" value="1" min="1" style="min-width: 60px;" required>
-                            <button type="submit" class="btn btn-success">Buy</button>
-                        </div>
-                    </form>
+                    <?php if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'supplier'): ?>
+                        <form id="buy-form" method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" class="mt-4">
+                            <div class="input-group mb-3" style="max-width: 200px;">
+                                <input type="number" name="quantity" class="form-control" value="1" min="1" style="min-width: 60px;" required>
+                                <button type="submit" class="btn btn-success">Buy</button>
+                            </div>
+                        </form>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

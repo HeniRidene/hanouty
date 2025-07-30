@@ -98,10 +98,12 @@ if (session_status() === PHP_SESSION_NONE) {
                             <h5 class="card-title mb-1"><?= htmlspecialchars($product['title']) ?></h5>
                             <div class="text-success fw-bold mb-2">$<?= number_format($product['price'], 2) ?></div>
                             <a href="router.php?action=product&id=<?= $product['id'] ?>" class="btn btn-outline-dark">Details</a>
-                            <form id="buy-form-<?= $product['id'] ?>" method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" style="display:inline-block; margin-left:8px;">
-                                <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="btn btn-success">Buy</button>
-                            </form>
+                            <?php if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'supplier'): ?>
+                                <form id="buy-form-<?= $product['id'] ?>" method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" style="display:inline-block; margin-left:8px;">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="btn btn-success">Buy</button>
+                                </form>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

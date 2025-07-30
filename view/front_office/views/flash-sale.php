@@ -73,6 +73,15 @@ if (session_status() === PHP_SESSION_NONE) {
             font-size: 1.2em;
             margin-right: 0.3em;
         }
+                .card-body form {
+            display: inline-block;
+            margin-left: 8px;
+        }
+
+        .card-body .btn {
+            min-width: 120px;
+            padding: 0.375rem 0.75rem;
+        }
     </style>
 </head>
 <body style="min-height: 100vh; display: flex; flex-direction: column;">
@@ -192,10 +201,12 @@ if (session_status() === PHP_SESSION_NONE) {
                                     <div class="flash-countdown mb-2" data-end="<?= $endTimestamp ?>"></div>
                                 <?php endif; ?>
                                 <a href="router.php?action=product&id=<?= $product['id'] ?>" class="btn btn-outline-dark">View Details</a>
-                                <form id="buy-form-<?= $product['id'] ?>" method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" style="display:inline-block; margin-left:8px;">
-                                    <input type="hidden" name="quantity" value="1">
-                                    <button type="submit" class="btn btn-success">Buy</button>
-                                </form>
+                                <?php if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'supplier'): ?>
+                                    <form id="buy-form-<?= $product['id'] ?>" method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" style="display:inline-block; margin-left:8px;">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <button type="submit" class="btn btn-success">Buy</button>
+                                    </form>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

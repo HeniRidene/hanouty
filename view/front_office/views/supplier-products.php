@@ -60,10 +60,12 @@ if (session_status() === PHP_SESSION_NONE) {
                         </div>
                         <div class="product-list-btns">
                             <a href="router.php?action=product&id=<?= $product['id'] ?>" class="btn btn-outline-dark btn-lg">View Details</a>
-                            <form method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" style="display:inline-block; margin-left:8px;">
-                                <input type="hidden" name="quantity" value="1">
-                                <button type="submit" class="btn btn-success btn-lg">Buy</button>
-                            </form>
+                            <?php if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'supplier'): ?>
+                                <form method="POST" action="router.php?action=add-to-cart&id=<?= $product['id'] ?>" style="display:inline-block; margin-left:8px;">
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="btn btn-success btn-lg">Buy</button>
+                                </form>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

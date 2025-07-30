@@ -229,7 +229,6 @@ $sidebar = new Sidebar();
               <h6><i class="ti ti-info-circle me-2"></i>Featured Spots Configuration</h6>
               <p class="mb-0">
                 This panel allows you to set the prices for featured spots on each page. These prices will be charged when suppliers purchase spots.
-                Price changes only affect new purchases - existing active spots retain their original price.
               </p>
             </div>
             

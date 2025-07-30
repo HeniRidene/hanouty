@@ -16,6 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_product_id']))
 }
 $products = $productModel->getAllActiveProducts();
 $currentUser = $authController->getCurrentUser();
+
+require_once '../components/Sidebar.php';
+$sidebar = new Sidebar();
 ?>
 <!doctype html>
 <html lang="en">
@@ -28,12 +31,7 @@ $currentUser = $authController->getCurrentUser();
   <style>
     .product-img-thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; }
     .table td, .table th { vertical-align: middle; }
-    .left-sidebar { position: fixed; top: 0; left: 0; height: 100vh; width: 220px; background: #fff; border-right: 1px solid #eee; z-index: 1040; }
-    .nav.flex-column { margin-top: 2rem; }
-    .nav.flex-column .nav-link { color: #333; font-weight: 500; padding: 0.75rem 1.5rem; border-radius: 0.5rem; margin-bottom: 0.5rem; transition: background 0.2s, color 0.2s; }
-    .nav.flex-column .nav-link.active, .nav.flex-column .nav-link:hover { background: #f1f3f4; color: #198754; }
-    .nav.flex-column .nav-link i { margin-right: 0.7rem; }
-    .body-wrapper { margin-left: 220px; background: #f8f9fa; min-height: 100vh; }
+    .body-wrapper { margin-left: 260px; background: #f8f9fa; min-height: 100vh; }
     .app-header { background: #fff; border-bottom: 1px solid #eee; }
     .navbar .navbar-nav .nav-link img { border: 2px solid #dee2e6; }
     .dropdown-menu { min-width: 220px; }
@@ -41,29 +39,7 @@ $currentUser = $authController->getCurrentUser();
   </style>
 </head>
 <body>
-<?php 
-require_once '../components/Sidebar.php';
-$sidebar = new Sidebar();
-echo $sidebar->render();
-?>
-  <!-- Sidebar Start -->
-  <aside class="left-sidebar">
-    <div>
-      <ul class="nav flex-column">
-        <li class="nav-item">
-          <a class="nav-link" href="index.php">
-            <i class="ti ti-home"></i> Dashboard
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link active" href="products.php">
-            <i class="ti ti-package"></i> Products
-          </a>
-        </li>
-      </ul>
-    </div>
-  </aside>
-  <!-- Sidebar End -->
+<?php echo $sidebar->render(); ?>
   <div class="body-wrapper">
     <!-- Header Start -->
     <header class="app-header">
