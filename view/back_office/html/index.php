@@ -14,7 +14,23 @@ $users = $userController->getAllUsersWithDetails();
 $userCount = count($users);
 $supplierCount = count(array_filter($users, function($u){return $u['role']==='supplier';}));
 $clientCount = count(array_filter($users, function($u){return $u['role']==='client';}));
-$productCount = count($productModel->getAllActiveProducts());
+$adminCount = count(array_filter($users, function($u){return $u['role']==='admin';}));
+$roleCounts = [
+    'Admin' => $adminCount,
+    'Supplier' => $supplierCount,
+    'Client' => $clientCount
+];
+$recentUsers = array_slice($users, 0, 5);
+
+$products = $productModel->getAllActiveProducts();
+$productCount = count($products);
+$categoryCounts = [];
+foreach ($products as $p) {
+    $cat = $p['category'] ?: 'Uncategorized';
+    if (!isset($categoryCounts[$cat])) $categoryCounts[$cat] = 0;
+    $categoryCounts[$cat]++;
+}
+$recentProducts = array_slice($products, 0, 5);
 $totalSales = 0; // Placeholder, replace with real sales data if available
 $currentUser = $authController->getCurrentUser();
 ?>
@@ -83,65 +99,66 @@ echo $sidebar->render();
       </div>
     </div>
 
-    <!-- Stats Row -->
-    <div class="row">
-      <div class="col-lg-3 col-md-6">
-        <div class="card hover-shadow">
+    <!-- Charts Row -->
+    <div class="row mb-4">
+      <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-transparent"><strong>User Roles Distribution</strong></div>
           <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="rounded-circle bg-primary-subtle p-3 d-flex align-items-center justify-content-center">
-                <i class="ti ti-users text-primary fs-5"></i>
-              </div>
-              <div class="ms-3">
-                <h3 class="mb-0 fw-semibold"><?php echo $userCount; ?></h3>
-                <p class="text-muted mb-0">Total Users</p>
-              </div>
-            </div>
+            <div id="userRolesChart" style="height:320px;"></div>
           </div>
         </div>
       </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card hover-shadow">
+      <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-transparent"><strong>Products by Category</strong></div>
           <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="rounded-circle bg-success-subtle p-3 d-flex align-items-center justify-content-center">
-                <i class="ti ti-building-store text-success fs-5"></i>
-              </div>
-              <div class="ms-3">
-                <h3 class="mb-0 fw-semibold"><?php echo $supplierCount; ?></h3>
-                <p class="text-muted mb-0">Suppliers</p>
-              </div>
-            </div>
+            <div id="productCategoriesChart" style="height:320px;"></div>
           </div>
         </div>
       </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card hover-shadow">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="rounded-circle bg-warning-subtle p-3 d-flex align-items-center justify-content-center">
-                <i class="ti ti-user-circle text-warning fs-5"></i>
-              </div>
-              <div class="ms-3">
-                <h3 class="mb-0 fw-semibold"><?php echo $clientCount; ?></h3>
-                <p class="text-muted mb-0">Clients</p>
-              </div>
-            </div>
+    </div>
+    <!-- Recent Users & Products Row -->
+    <div class="row mb-4">
+      <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-transparent"><strong>Recent Users</strong></div>
+          <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+              <?php foreach ($recentUsers as $u): ?>
+                <li class="list-group-item d-flex align-items-center">
+                  <span class="badge bg-primary me-2" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
+                    <i class="ti ti-user"></i>
+                  </span>
+                  <div>
+                    <div class="fw-semibold"><?= htmlspecialchars($u['name']) ?></div>
+                    <div class="text-muted small"><?= htmlspecialchars($u['email']) ?> (<?= ucfirst($u['role']) ?>)</div>
+                  </div>
+                  <span class="ms-auto text-muted small"><?= date('Y-m-d', strtotime($u['created_at'])) ?></span>
+                </li>
+              <?php endforeach; ?>
+            </ul>
           </div>
         </div>
       </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="card hover-shadow">
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <div class="rounded-circle bg-info-subtle p-3 d-flex align-items-center justify-content-center">
-                <i class="ti ti-package text-info fs-5"></i>
-              </div>
-              <div class="ms-3">
-                <h3 class="mb-0 fw-semibold"><?php echo $productCount; ?></h3>
-                <p class="text-muted mb-0">Products</p>
-              </div>
-            </div>
+      <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+          <div class="card-header bg-transparent"><strong>Recent Products</strong></div>
+          <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+              <?php foreach ($recentProducts as $p): ?>
+                <li class="list-group-item d-flex align-items-center">
+                  <span class="badge bg-info me-2" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
+                    <i class="ti ti-package"></i>
+                  </span>
+                  <div>
+                    <div class="fw-semibold"><?= htmlspecialchars($p['title']) ?></div>
+                    <div class="text-muted small">Category: <?= htmlspecialchars($p['category'] ?: 'Uncategorized') ?></div>
+                  </div>
+                  <span class="ms-auto text-muted small"><?= date('Y-m-d', strtotime($p['created_at'])) ?></span>
+                </li>
+              <?php endforeach; ?>
+            </ul>
           </div>
         </div>
       </div>
@@ -233,5 +250,38 @@ echo $sidebar->render();
 </div>
 <script src="../assets/libs/jquery/dist/jquery.min.js"></script>
 <script src="../assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<link rel="stylesheet" href="../assets/libs/apexcharts/src/assets/apexcharts.css" />
+<script src="../assets/libs/apexcharts/dist/apexcharts.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // User Roles Donut Chart
+    var userRolesOptions = {
+      chart: { type: 'donut', height: 320 },
+      series: <?= json_encode(array_values($roleCounts)) ?>,
+      labels: <?= json_encode(array_keys($roleCounts)) ?>,
+      colors: ['#6366f1', '#22c55e', '#f59e42'],
+      legend: { position: 'bottom' },
+      dataLabels: { enabled: true },
+    };
+    var userRolesChart = new ApexCharts(document.querySelector('#userRolesChart'), userRolesOptions);
+    userRolesChart.render();
+    // Product Categories Bar Chart
+    var productCategoriesOptions = {
+      chart: { type: 'bar', height: 320 },
+      series: [{
+        name: 'Products',
+        data: <?= json_encode(array_values($categoryCounts)) ?>
+      }],
+      xaxis: {
+        categories: <?= json_encode(array_keys($categoryCounts)) ?>,
+        labels: { rotate: -45 }
+      },
+      colors: ['#0ea5e9'],
+      dataLabels: { enabled: true },
+    };
+    var productCategoriesChart = new ApexCharts(document.querySelector('#productCategoriesChart'), productCategoriesOptions);
+    productCategoriesChart.render();
+  });
+</script>
 </body>
 </html> 
