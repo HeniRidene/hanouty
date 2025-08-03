@@ -2,6 +2,80 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+// PHP validation for all fields
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $errors = [];
+    $title = trim($_POST['title'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $price = $_POST['price'] ?? '';
+    $category = $_POST['category'] ?? '';
+    $allowedCategories = [
+        'Electronics','Clothing','Home & Garden','Sports','Books','Toys','Automotive','Health & Beauty','Other'
+    ];
+    $uploadedCount = isset($_FILES['images']['name']) ? count(array_filter($_FILES['images']['name'])) : 0;
+    $existingCount = isset($_POST['existing_images']) ? count($_POST['existing_images']) : 0;
+    $totalCount = $uploadedCount + $existingCount;
+
+    // Fetch dynamic max image limit (default 5)
+    require_once $_SERVER['DOCUMENT_ROOT'] . '/hanouty/model/Product.php';
+    $maxProductImages = 5;
+    // If editing an existing product, fetch its max_product_images
+    if (isset($_GET['product_id'])) {
+        $productModel = new Product();
+        $product = $productModel->getById((int)$_GET['product_id']);
+        if ($product && isset($product['max_product_images']) && $product['max_product_images'] > 0) {
+            $maxProductImages = (int)$product['max_product_images'];
+        }
+    }
+
+    // Title
+    if ($title === '') {
+        $errors['title'] = 'Title is required.';
+    } elseif (mb_strlen($title) < 3 || mb_strlen($title) > 100) {
+        $errors['title'] = 'Title must be between 3 and 100 characters.';
+    }
+    // Description
+    if ($description === '') {
+        $errors['description'] = 'Description is required.';
+    } elseif (mb_strlen($description) < 10 || mb_strlen($description) > 1000) {
+        $errors['description'] = 'Description must be between 10 and 1000 characters.';
+    }
+    // Price
+    if ($price === '' || !is_numeric($price)) {
+        $errors['price'] = 'Price is required and must be a number.';
+    } elseif ($price < 0) {
+        $errors['price'] = 'Price must be a positive number.';
+    }
+    // Category
+    if ($category === '' || !in_array($category, $allowedCategories)) {
+        $errors['category'] = 'Please select a valid category.';
+    }
+    // Images
+    if ($totalCount > $maxProductImages) {
+        $errors['images'] = 'You have selected more than ' . $maxProductImages . ' images. Please select up to ' . $maxProductImages . ' images only.';
+        // Block form submission if over max
+        $addProductError = $errors['images'];
+    }
+    // If errors, show first error as alert (for compatibility with existing UI)
+    if (!empty($errors)) {
+        $addProductError = reset($errors);
+    }
+}
+// Always define max image limit for use in HTML
+require_once $_SERVER['DOCUMENT_ROOT'] . '/hanouty/model/Product.php';
+// Always use latest admin-set value for new products
+$maxProductImages = 5;
+if (isset($_SESSION['global_max_images']) && intval($_SESSION['global_max_images']) > 0) {
+    $maxProductImages = intval($_SESSION['global_max_images']);
+}
+if (isset($_GET['product_id'])) {
+    $productModel = new Product();
+    $product = $productModel->getById((int)$_GET['product_id']);
+    if ($product && isset($product['max_product_images']) && $product['max_product_images'] > 0) {
+        $maxProductImages = (int)$product['max_product_images'];
+    }
+}
+
 // Load supplier's uploaded images for selection
 $supplierImages = [];
 if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
@@ -188,8 +262,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                                     <i class="bi-tag me-1"></i>
                                     Product Title *
                                 </label>
-                                <input type="text" class="form-control" id="title" name="title" required 
-                                       placeholder="Enter product title" value="<?= htmlspecialchars($_POST['title'] ?? '') ?>">
+                                <input class="form-control" id="title" name="title" placeholder="Enter product title" value="<?= htmlspecialchars($_POST['title'] ?? '') ?>">
                             </div>
                             
                             <!-- Product Description -->
@@ -198,8 +271,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                                     <i class="bi-text-paragraph me-1"></i>
                                     Description *
                                 </label>
-                                <textarea class="form-control" id="description" name="description" rows="4" required 
-                                          placeholder="Describe your product in detail"><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
+                                <textarea class="form-control" id="description" name="description" rows="4" placeholder="Describe your product in detail"><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
                             </div>
                             
                             <!-- Price and Category -->
@@ -212,8 +284,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                                         </label>
                                         <div class="input-group">
                                             <span class="input-group-text">$</span>
-                                            <input type="number" class="form-control" id="price" name="price" step="0.01" min="0" required 
-                                                   placeholder="0.00" value="<?= htmlspecialchars($_POST['price'] ?? '') ?>">
+                                            <input class="form-control" id="price" name="price" placeholder="0.00" value="<?= htmlspecialchars($_POST['price'] ?? '') ?>">
                                         </div>
                                     </div>
                                 </div>
@@ -244,15 +315,17 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                             <!-- Product Images -->
                             <div class="mb-3">
                                 <label class="form-label">
-                                    <i class="bi-images me-1"></i>
-                                    Product Images
-                                </label>
+    <i class="bi-images me-1"></i>
+    Product Images
+    <span class="text-muted" style="font-size:0.95em;">(Maximum <?= $maxProductImages ?> images)</span>
+</label>
+<div id="image-limit-warning" class="mt-1" style="display:none;"></div>
                                 <div class="file-input-wrapper">
                                     <input type="file" id="images" name="images[]" multiple accept="image/*" onchange="previewImages(this)">
                                     <div>
                                         <i class="bi-cloud-upload fs-1 text-muted"></i>
                                         <p class="mb-0 mt-2">Click to upload images</p>
-                                        <small class="text-muted">JPG, PNG, GIF, WebP (max 5 images)</small>
+                                        <small class="text-muted">JPG, PNG, GIF, WebP (max <?= $maxProductImages ?> images)</small>
                                     </div>
                                 </div>
                                 <div id="imagePreview" class="image-preview"></div>
@@ -267,7 +340,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                                     <?php foreach ($supplierImages as $img): ?>
                                         <div class="col-3 mb-2 text-center">
                                             <label style="cursor:pointer;">
-                                                <input type="checkbox" name="existing_images[]" value="<?= htmlspecialchars($img) ?>" style="margin-bottom:5px;">
+                                                <input type="checkbox" name="existing_images[]" value="<?= htmlspecialchars($img) ?>" style="margin-bottom:5px;" class="existing-image-checkbox">
                                                 <img src="/hanouty/uploads/products/<?= htmlspecialchars($img) ?>" class="img-fluid rounded" style="max-height:80px;">
                                             </label>
                                         </div>
@@ -300,35 +373,94 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+    // Pass PHP maxProductImages to JS
+    window.maxProductImages = <?= json_encode($maxProductImages) ?>;
+        // Helper to update warning only (do not block selection or disable fields)
+        function updateImageSelectionLimit() {
+            const maxImages = typeof window.maxProductImages !== 'undefined' ? window.maxProductImages : 5;
+            const fileInput = document.getElementById('images');
+            const checkboxes = document.querySelectorAll('.existing-image-checkbox');
+            const warningDiv = document.getElementById('image-limit-warning');
+            let checkedCount = 0;
+            checkboxes.forEach(cb => { if (cb.checked) checkedCount++; });
+            const filesCount = fileInput.files ? fileInput.files.length : 0;
+            const totalSelected = checkedCount + filesCount;
+
+            if (totalSelected > maxImages) {
+                warningDiv.style.display = 'block';
+                warningDiv.className = 'text-danger fw-bold mt-1';
+                warningDiv.innerText = `You have ${totalSelected - maxImages} image(s) more than ${maxImages}. You can still submit, but only the first ${maxImages} will be saved.`;
+            } else {
+                warningDiv.style.display = 'none';
+                warningDiv.innerText = '';
+            }
+            // Do NOT block submission or disable checkboxes/files, just warn.
+        }
+            const maxImages = 5;
+            const fileInput = document.getElementById('images');
+            const checkboxes = document.querySelectorAll('.existing-image-checkbox');
+            let checkedCount = 0;
+            checkboxes.forEach(cb => { if (cb.checked) checkedCount++; });
+            const filesCount = fileInput.files ? fileInput.files.length : 0;
+            const totalSelected = checkedCount + filesCount;
+
+            // Disable unchecked checkboxes if limit reached
+            checkboxes.forEach(cb => { cb.disabled = false; });
+
+
         function previewImages(input) {
             const preview = document.getElementById('imagePreview');
             preview.innerHTML = '';
-            
-            if (input.files) {
-                const filesArray = Array.from(input.files);
-                const maxFiles = 5;
-                
-                filesArray.slice(0, maxFiles).forEach((file, index) => {
-                    if (file.type.startsWith('image/')) {
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            const img = document.createElement('img');
-                            img.src = e.target.result;
-                            img.alt = `Preview ${index + 1}`;
-                            preview.appendChild(img);
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
-                
-                if (filesArray.length > maxFiles) {
-                    const warning = document.createElement('div');
-                    warning.className = 'alert alert-warning mt-2';
-                    warning.innerHTML = `<i class="bi-exclamation-triangle me-1"></i> Only the first ${maxFiles} images will be uploaded.`;
-                    preview.appendChild(warning);
+            const maxFiles = typeof window.maxProductImages !== 'undefined' ? window.maxProductImages : 5;
+            // Count checked checkboxes
+            const checkboxes = document.querySelectorAll('.existing-image-checkbox');
+            let checkedCount = 0;
+            checkboxes.forEach(cb => { if (cb.checked) checkedCount++; });
+            let filesArray = input.files ? Array.from(input.files) : [];
+
+            // Always show previews for up to maxFiles images
+            filesArray.slice(0, maxFiles).forEach((file, index) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.alt = `Preview ${index + 1}`;
+                        preview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
                 }
+            });
+
+            // Show warning if total selected is more than maxFiles
+            const totalSelected = checkedCount + filesArray.length;
+            const warningDiv = document.getElementById('image-limit-warning');
+            if (totalSelected > maxFiles) {
+                warningDiv.style.display = 'block';
+                warningDiv.className = 'text-danger fw-bold mt-1';
+                warningDiv.innerText = `You have ${totalSelected - maxFiles} image(s) more than ${maxFiles}. You can still submit, but only the first ${maxFiles} will be saved.`;
+            } else {
+                warningDiv.style.display = 'none';
+                warningDiv.innerText = '';
             }
+            // Do NOT block submission or disable checkboxes/files, just warn.
+        
         }
+
+        // Listen for changes on checkboxes and file input
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('images');
+            const checkboxes = document.querySelectorAll('.existing-image-checkbox');
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', function() {
+                    updateImageSelectionLimit();
+                });
+            });
+            fileInput.addEventListener('change', function() {
+                previewImages(fileInput);
+            });
+            updateImageSelectionLimit();
+        });
     </script>
 </body>
-</html> 
+</html>

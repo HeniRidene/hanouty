@@ -303,7 +303,8 @@ CREATE TABLE `products` (
   `images` text DEFAULT NULL,
   `status` enum('active','pending','rejected') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `is_flash_sale` tinyint(1) DEFAULT 0
+  `is_flash_sale` tinyint(1) DEFAULT 0,
+  `max_product_images` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -467,6 +468,11 @@ ALTER TABLE `orders`
 --
 ALTER TABLE `products`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+
+--
+-- Ajout du champ max_product_images à la table products (migration)
+--
+ALTER TABLE `products` ADD COLUMN `max_product_images` int(11) DEFAULT NULL;
 
 --
 -- AUTO_INCREMENT pour la table `supplier`

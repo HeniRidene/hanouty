@@ -102,22 +102,24 @@ class Product {
     // Add new product
     public function addProduct($data) {
         try {
-            $sql = "INSERT INTO products (title, description, price, category, images, user_id, is_flash_sale, status, created_at) 
-                    VALUES (:title, :description, :price, :category, :images, :user_id, :is_flash_sale, 'active', NOW())";
+            $sql = "INSERT INTO products (title, description, price, category, images, user_id, is_flash_sale, status, created_at, max_product_images) 
+                    VALUES (:title, :description, :price, :category, :images, :user_id, :is_flash_sale, 'active', NOW(), :max_product_images)";
             $stmt = $this->pdo->prepare($sql);
             $stmt->bindParam(':title', $data['title']);
             $stmt->bindParam(':description', $data['description']);
             $stmt->bindParam(':price', $data['price']);
             $stmt->bindParam(':category', $data['category']);
             $stmt->bindParam(':images', $data['images']);
-            $stmt->bindParam(':user_id', $data['user_id']); // Fix: use user_id
+            $stmt->bindParam(':user_id', $data['user_id']);
             $stmt->bindParam(':is_flash_sale', $data['is_flash_sale']);
+            $maxImages = isset($data['max_product_images']) ? $data['max_product_images'] : null;
+            $stmt->bindParam(':max_product_images', $maxImages);
             $result = $stmt->execute();
             if (!$result) {
                 $errorInfo = $stmt->errorInfo();
                 throw new Exception("Database error: " . $errorInfo[2]);
             }
-            return $this->pdo->lastInsertId(); // Return the inserted product ID
+            return $this->pdo->lastInsertId();
         } catch (PDOException $e) {
             throw new Exception("Error adding product: " . $e->getMessage());
         }
@@ -137,6 +139,10 @@ class Product {
             if (!empty($data['images'])) {
                 $fields['images'] = $data['images'];
                 $setSql .= ', images = :images';
+            }
+            if (array_key_exists('max_product_images', $data)) {
+                $fields['max_product_images'] = $data['max_product_images'];
+                $setSql .= ', max_product_images = :max_product_images';
             }
             $sql = "UPDATE products SET $setSql WHERE id = :id";
             $stmt = $this->pdo->prepare($sql);

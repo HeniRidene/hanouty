@@ -7,6 +7,16 @@ if (!$authController->isLoggedIn() || !$authController->isAdmin()) {
     exit();
 }
 $productModel = new Product();
+// Handle max images update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_max_images_id'])) {
+    $productId = intval($_POST['update_max_images_id']);
+    $maxImages = isset($_POST['max_product_images']) ? intval($_POST['max_product_images']) : null;
+    if ($maxImages !== null && $maxImages > 0) {
+        $productModel->updateProduct($productId, ['max_product_images' => $maxImages]);
+    }
+    header('Location: products.php');
+    exit();
+}
 // Handle product deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_product_id'])) {
     $productId = $_POST['delete_product_id'];
@@ -89,6 +99,7 @@ $sidebar = new Sidebar();
                   <th>Description</th>
                   <th>Supplier</th>
                   <th>Price</th>
+                  <th>Max Images</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -111,6 +122,7 @@ $sidebar = new Sidebar();
                   <td><?= htmlspecialchars($product['description']) ?></td>
                   <td><?= htmlspecialchars($product['supplier_name'] ?? 'Unknown') ?></td>
                   <td><?= number_format($product['price'], 2) ?> DT</td>
+                  <td><?= htmlspecialchars($product['max_product_images'] ?? '-') ?></td>
                   <td>
                     <a href="product-details.php?id=<?= $product['id'] ?>" class="btn btn-sm btn-info">View Details</a>
                     <form method="POST" action="products.php" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this product?');">
@@ -125,6 +137,28 @@ $sidebar = new Sidebar();
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+      <!-- Global Max Images Setting -->
+      <div class="card mt-4">
+        <div class="card-body">
+          <h6 class="card-title fw-semibold mb-3">Set Default Maximum Images for All Products</h6>
+          <form method="POST" action="products.php" class="d-flex align-items-center" style="gap: 1em;">
+            <input type="hidden" name="set_global_max_images" value="1">
+            <?php
+              // Placeholder: read from config or DB. Replace with actual config fetch if available.
+              $globalMaxImages = isset($_SESSION['global_max_images']) ? intval($_SESSION['global_max_images']) : 5;
+              if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_global_max_images'])) {
+                $newGlobalMax = intval($_POST['global_max_images'] ?? 5);
+                $_SESSION['global_max_images'] = $newGlobalMax;
+                $globalMaxImages = $newGlobalMax;
+                echo '<div class="alert alert-success mb-0 me-3">Default max images updated!</div>';
+              }
+            ?>
+            <label for="global_max_images" class="mb-0">Default Max Images:</label>
+            <input type="number" id="global_max_images" name="global_max_images" min="1" max="20" value="<?= $globalMaxImages ?>" style="width: 70px;" class="form-control form-control-sm">
+            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+          </form>
         </div>
       </div>
     </div>

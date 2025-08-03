@@ -119,6 +119,14 @@ if (is_dir($dir)) {
                         <span class="hide-menu">Navigation</span>
                     </li>
                     <li class="sidebar-item">
+                        <a class="sidebar-link" href="buy_spot.php" aria-expanded="false">
+                            <span>
+                                <i class="ti ti-star"></i>
+                            </span>
+                            <span class="hide-menu">Buy Spot</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
                         <a class="sidebar-link" href="/hanouty/view/front_office/router.php" aria-expanded="false">
                             <span>
                                 <i class="ti ti-world"></i>
