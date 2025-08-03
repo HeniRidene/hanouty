@@ -1,22 +1,59 @@
 <?php
 require_once '../../../controller/AuthController.php';
 require_once '../../../model/Product.php';
+
 $authController = new AuthController();
 if (!$authController->isLoggedIn() || !$authController->isAdmin()) {
     header('Location: authentication-login.php');
     exit();
 }
+
 $productModel = new Product();
-// Handle max images update
+
+// Handle global max images setting update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_global_max_images'])) {
+    $newGlobalMax = intval($_POST['global_max_images'] ?? 5);
+    
+    // Store in session
+    $_SESSION['global_max_images'] = $newGlobalMax;
+    
+    // Also store in a config file or database for persistence
+    $configFile = $_SERVER['DOCUMENT_ROOT'] . '/hanouty/config/global_settings.json';
+    $configDir = dirname($configFile);
+    
+    // Create config directory if it doesn't exist
+    if (!is_dir($configDir)) {
+        mkdir($configDir, 0755, true);
+    }
+    
+    // Read existing config or create new
+    $config = [];
+    if (file_exists($configFile)) {
+        $config = json_decode(file_get_contents($configFile), true) ?: [];
+    }
+    
+    // Update global max images setting
+    $config['global_max_images'] = $newGlobalMax;
+    
+    // Save to file
+    file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT));
+    
+    $globalUpdateMessage = 'Default max images updated to ' . $newGlobalMax . ' successfully!';
+    error_log("Global max images updated to: " . $newGlobalMax);
+}
+
+// Handle max images update for specific product
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_max_images_id'])) {
     $productId = intval($_POST['update_max_images_id']);
     $maxImages = isset($_POST['max_product_images']) ? intval($_POST['max_product_images']) : null;
     if ($maxImages !== null && $maxImages > 0) {
         $productModel->updateProduct($productId, ['max_product_images' => $maxImages]);
+        $productUpdateMessage = 'Product max images updated successfully!';
     }
     header('Location: products.php');
     exit();
 }
+
 // Handle product deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_product_id'])) {
     $productId = $_POST['delete_product_id'];
@@ -24,6 +61,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_product_id']))
     header('Location: products.php');
     exit();
 }
+
+// Load global max images setting from persistent storage
+$globalMaxImages = 5; // Default fallback
+$configFile = $_SERVER['DOCUMENT_ROOT'] . '/hanouty/config/global_settings.json';
+
+if (file_exists($configFile)) {
+    $config = json_decode(file_get_contents($configFile), true);
+    if (isset($config['global_max_images']) && intval($config['global_max_images']) > 0) {
+        $globalMaxImages = intval($config['global_max_images']);
+        // Also update session to keep it in sync
+        $_SESSION['global_max_images'] = $globalMaxImages;
+    }
+} elseif (isset($_SESSION['global_max_images']) && intval($_SESSION['global_max_images']) > 0) {
+    // Fallback to session if config file doesn't exist
+    $globalMaxImages = intval($_SESSION['global_max_images']);
+}
+
 $products = $productModel->getAllActiveProducts();
 $currentUser = $authController->getCurrentUser();
 
@@ -46,6 +100,13 @@ $sidebar = new Sidebar();
     .navbar .navbar-nav .nav-link img { border: 2px solid #dee2e6; }
     .dropdown-menu { min-width: 220px; }
     .btn-delete-product { margin-left: 8px; }
+    .config-info {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 0.375rem;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
@@ -87,9 +148,60 @@ $sidebar = new Sidebar();
     </header>
     <!-- Header End -->
     <div class="container-fluid py-4">
+      <!-- Success Messages -->
+      <?php if (isset($globalUpdateMessage)): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <i class="ti ti-check me-2"></i>
+          <?= htmlspecialchars($globalUpdateMessage) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <?php endif; ?>
+      
+      <?php if (isset($productUpdateMessage)): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          <i class="ti ti-check me-2"></i>
+          <?= htmlspecialchars($productUpdateMessage) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <?php endif; ?>
+
+      <!-- Global Max Images Setting -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h6 class="card-title fw-semibold mb-3">
+            <i class="ti ti-settings me-2"></i>
+            Global Maximum Images Setting
+          </h6>
+          <form method="POST" action="products.php" class="d-flex align-items-center flex-wrap" style="gap: 1em;">
+            <input type="hidden" name="set_global_max_images" value="1">
+            <div class="d-flex align-items-center" style="gap: 0.5em;">
+              <label for="global_max_images" class="mb-0 fw-medium">Default Max Images for All New Products:</label>
+              <input type="number" id="global_max_images" name="global_max_images" min="1" max="20" value="<?= $globalMaxImages ?>" style="width: 80px;" class="form-control form-control-sm">
+              <button type="submit" class="btn btn-sm btn-primary">
+                <i class="ti ti-device-floppy me-1"></i>
+                Save
+              </button>
+            </div>
+          </form>
+          
+          <div class="config-info mt-3">
+            <small class="text-muted">
+              <strong>Current Setting:</strong> Maximum <?= $globalMaxImages ?> images per product<br>
+              <strong>Config File:</strong> <?= file_exists($configFile) ? 'Found' : 'Not Found' ?><br>
+              <strong>Session Value:</strong> <?= $_SESSION['global_max_images'] ?? 'Not Set' ?><br>
+              <em>This setting applies to all new products. Existing products can have individual limits set below.</em>
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Products List -->
       <div class="card">
         <div class="card-body">
-          <h5 class="card-title fw-semibold mb-4">Product List</h5>
+          <h5 class="card-title fw-semibold mb-4">
+            <i class="ti ti-package me-2"></i>
+            Product List
+          </h5>
           <div class="table-responsive">
             <table class="table table-striped">
               <thead>
@@ -119,12 +231,25 @@ $sidebar = new Sidebar();
                     <img src="<?= htmlspecialchars($img) ?>" class="product-img-thumb" alt="Product Image">
                   </td>
                   <td><?= htmlspecialchars($product['title']) ?></td>
-                  <td><?= htmlspecialchars($product['description']) ?></td>
+                  <td><?= htmlspecialchars(substr($product['description'], 0, 50)) ?>...</td>
                   <td><?= htmlspecialchars($product['supplier_name'] ?? 'Unknown') ?></td>
                   <td><?= number_format($product['price'], 2) ?> DT</td>
-                  <td><?= htmlspecialchars($product['max_product_images'] ?? '-') ?></td>
                   <td>
-                    <a href="product-details.php?id=<?= $product['id'] ?>" class="btn btn-sm btn-info">View Details</a>
+                    <form method="POST" action="products.php" style="display:inline-flex; align-items:center; gap:0.5em;">
+                      <input type="hidden" name="update_max_images_id" value="<?= $product['id'] ?>">
+                      <input type="number" name="max_product_images" min="1" max="20" 
+                             value="<?= htmlspecialchars($product['max_product_images'] ?? $globalMaxImages) ?>" 
+                             style="width: 60px;" class="form-control form-control-sm">
+                      <button type="submit" class="btn btn-xs btn-outline-primary" title="Update Max Images">
+                        <i class="ti ti-check"></i>
+                      </button>
+                    </form>
+                  </td>
+                  <td>
+                    <a href="product-details.php?id=<?= $product['id'] ?>" class="btn btn-sm btn-info">
+                      <i class="ti ti-eye me-1"></i>
+                      View
+                    </a>
                     <form method="POST" action="products.php" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this product?');">
                       <input type="hidden" name="delete_product_id" value="<?= $product['id'] ?>">
                       <button type="submit" class="btn btn-sm btn-outline-danger btn-delete-product" title="Delete Product">
@@ -139,30 +264,8 @@ $sidebar = new Sidebar();
           </div>
         </div>
       </div>
-      <!-- Global Max Images Setting -->
-      <div class="card mt-4">
-        <div class="card-body">
-          <h6 class="card-title fw-semibold mb-3">Set Default Maximum Images for All Products</h6>
-          <form method="POST" action="products.php" class="d-flex align-items-center" style="gap: 1em;">
-            <input type="hidden" name="set_global_max_images" value="1">
-            <?php
-              // Placeholder: read from config or DB. Replace with actual config fetch if available.
-              $globalMaxImages = isset($_SESSION['global_max_images']) ? intval($_SESSION['global_max_images']) : 5;
-              if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_global_max_images'])) {
-                $newGlobalMax = intval($_POST['global_max_images'] ?? 5);
-                $_SESSION['global_max_images'] = $newGlobalMax;
-                $globalMaxImages = $newGlobalMax;
-                echo '<div class="alert alert-success mb-0 me-3">Default max images updated!</div>';
-              }
-            ?>
-            <label for="global_max_images" class="mb-0">Default Max Images:</label>
-            <input type="number" id="global_max_images" name="global_max_images" min="1" max="20" value="<?= $globalMaxImages ?>" style="width: 70px;" class="form-control form-control-sm">
-            <button type="submit" class="btn btn-sm btn-primary">Save</button>
-          </form>
-        </div>
-      </div>
     </div>
   </div>
   <script src="../assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html> 
+</html>
