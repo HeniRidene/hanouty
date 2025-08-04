@@ -78,7 +78,18 @@ if (file_exists($configFile)) {
     $globalMaxImages = intval($_SESSION['global_max_images']);
 }
 
-$products = $productModel->getAllActiveProducts();
+// Pagination setup
+$productsPerPage = 7;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$page = max(1, $page); // Ensure page is at least 1
+
+$allProducts = $productModel->getAllActiveProducts();
+$totalProducts = count($allProducts);
+$totalPages = ceil($totalProducts / $productsPerPage);
+$page = min($page, $totalPages); // Ensure page doesn't exceed total pages
+
+$offset = ($page - 1) * $productsPerPage;
+$products = array_slice($allProducts, $offset, $productsPerPage);
 $currentUser = $authController->getCurrentUser();
 
 require_once '../components/Sidebar.php';
@@ -95,8 +106,19 @@ $sidebar = new Sidebar();
   <style>
     .product-img-thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; }
     .table td, .table th { vertical-align: middle; }
-    .body-wrapper { margin-left: 260px; background: #f8f9fa; min-height: 100vh; }
-    .app-header { background: #fff; border-bottom: 1px solid #eee; }
+    .body-wrapper { 
+        margin-left: 260px; 
+        background: #f8f9fa; 
+        min-height: 100vh;
+        position: relative;
+        z-index: 15;
+    }
+    .app-header { 
+        background: #fff; 
+        border-bottom: 1px solid #eee;
+        position: relative;
+        z-index: 20;
+    }
     .navbar .navbar-nav .nav-link img { border: 2px solid #dee2e6; }
     .dropdown-menu { min-width: 220px; }
     .btn-delete-product { margin-left: 8px; }
@@ -148,53 +170,6 @@ $sidebar = new Sidebar();
     </header>
     <!-- Header End -->
     <div class="container-fluid py-4">
-      <!-- Success Messages -->
-      <?php if (isset($globalUpdateMessage)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-          <i class="ti ti-check me-2"></i>
-          <?= htmlspecialchars($globalUpdateMessage) ?>
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-      <?php endif; ?>
-      
-      <?php if (isset($productUpdateMessage)): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-          <i class="ti ti-check me-2"></i>
-          <?= htmlspecialchars($productUpdateMessage) ?>
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-      <?php endif; ?>
-
-      <!-- Global Max Images Setting -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <h6 class="card-title fw-semibold mb-3">
-            <i class="ti ti-settings me-2"></i>
-            Global Maximum Images Setting
-          </h6>
-          <form method="POST" action="products.php" class="d-flex align-items-center flex-wrap" style="gap: 1em;">
-            <input type="hidden" name="set_global_max_images" value="1">
-            <div class="d-flex align-items-center" style="gap: 0.5em;">
-              <label for="global_max_images" class="mb-0 fw-medium">Default Max Images for All New Products:</label>
-              <input type="number" id="global_max_images" name="global_max_images" min="1" max="20" value="<?= $globalMaxImages ?>" style="width: 80px;" class="form-control form-control-sm">
-              <button type="submit" class="btn btn-sm btn-primary">
-                <i class="ti ti-device-floppy me-1"></i>
-                Save
-              </button>
-            </div>
-          </form>
-          
-          <div class="config-info mt-3">
-            <small class="text-muted">
-              <strong>Current Setting:</strong> Maximum <?= $globalMaxImages ?> images per product<br>
-              <strong>Config File:</strong> <?= file_exists($configFile) ? 'Found' : 'Not Found' ?><br>
-              <strong>Session Value:</strong> <?= $_SESSION['global_max_images'] ?? 'Not Set' ?><br>
-              <em>This setting applies to all new products. Existing products can have individual limits set below.</em>
-            </small>
-          </div>
-        </div>
-      </div>
-
       <!-- Products List -->
       <div class="card">
         <div class="card-body">
@@ -261,6 +236,101 @@ $sidebar = new Sidebar();
                 <?php endforeach; ?>
               </tbody>
             </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="d-flex justify-content-between align-items-center mt-4">
+            <div class="text-muted">
+              Showing <?= $offset + 1 ?>-<?= min($offset + $productsPerPage, $totalProducts) ?> of <?= $totalProducts ?> products
+            </div>
+            <nav aria-label="Products pagination">
+              <ul class="pagination mb-0">
+                <?php if ($page > 1): ?>
+                  <li class="page-item">
+                    <a class="page-link" href="?page=<?= ($page - 1) ?>" aria-label="Previous">
+                      <span aria-hidden="true">&laquo;</span>
+                    </a>
+                  </li>
+                <?php endif; ?>
+                
+                <?php
+                $startPage = max(1, $page - 2);
+                $endPage = min($totalPages, $page + 2);
+                
+                if ($startPage > 1) {
+                    echo '<li class="page-item"><a class="page-link" href="?page=1">1</a></li>';
+                    if ($startPage > 2) {
+                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                    }
+                }
+                
+                for ($i = $startPage; $i <= $endPage; $i++) {
+                    echo '<li class="page-item' . ($i === $page ? ' active' : '') . '">';
+                    echo '<a class="page-link" href="?page=' . $i . '">' . $i . '</a>';
+                    echo '</li>';
+                }
+                
+                if ($endPage < $totalPages) {
+                    if ($endPage < $totalPages - 1) {
+                        echo '<li class="page-item disabled"><span class="page-link">...</span></li>';
+                    }
+                    echo '<li class="page-item"><a class="page-link" href="?page=' . $totalPages . '">' . $totalPages . '</a></li>';
+                }
+                ?>
+                
+                <?php if ($page < $totalPages): ?>
+                  <li class="page-item">
+                    <a class="page-link" href="?page=<?= ($page + 1) ?>" aria-label="Next">
+                      <span aria-hidden="true">&raquo;</span>
+                    </a>
+                  </li>
+                <?php endif; ?>
+              </ul>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success Messages -->
+      <?php if (isset($globalUpdateMessage)): ?>
+        <div class="alert alert-success alert-dismissible fade show mt-4" role="alert">
+          <i class="ti ti-check me-2"></i>
+          <?= htmlspecialchars($globalUpdateMessage) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <?php endif; ?>
+      
+      <?php if (isset($productUpdateMessage)): ?>
+        <div class="alert alert-success alert-dismissible fade show mt-4" role="alert">
+          <i class="ti ti-check me-2"></i>
+          <?= htmlspecialchars($productUpdateMessage) ?>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      <?php endif; ?>
+
+      <!-- Global Max Images Setting -->
+      <div class="card mt-4">
+        <div class="card-body">
+          <h6 class="card-title fw-semibold mb-3">
+            <i class="ti ti-settings me-2"></i>
+            Global Maximum Images Setting
+          </h6>
+          <form method="POST" action="products.php" class="d-flex align-items-center flex-wrap" style="gap: 1em;">
+            <input type="hidden" name="set_global_max_images" value="1">
+            <div class="d-flex align-items-center" style="gap: 0.5em;">
+              <label for="global_max_images" class="mb-0 fw-medium">Default Max Images for All New Products:</label>
+              <input type="number" id="global_max_images" name="global_max_images" min="1" max="20" value="<?= $globalMaxImages ?>" style="width: 80px;" class="form-control form-control-sm">
+              <button type="submit" class="btn btn-sm btn-primary">
+                <i class="ti ti-device-floppy me-1"></i>
+                Save
+              </button>
+            </div>
+          </form>
+          
+          <div class="config-info mt-3">
+            <small class="text-muted">
+              <strong>Current Setting:</strong> Maximum <?= $globalMaxImages ?> images per product<br>
+            </small>
           </div>
         </div>
       </div>

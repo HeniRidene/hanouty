@@ -58,7 +58,7 @@ class Sidebar {
             top: 0;
             left: 0;
             height: 100%;
-            z-index: 100;
+            z-index: 10;
         }
 
         .sidebar-nav {

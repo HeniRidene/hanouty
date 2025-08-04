@@ -265,6 +265,17 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
             object-fit: cover;
             border-radius: 0.5rem;
             border: 2px solid #dee2e6;
+            transition: all 0.2s ease-in-out;
+        }
+        .image-preview .btn-danger {
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .image-preview .position-relative:hover .btn-danger {
+            opacity: 1;
+        }
+        .image-preview .position-relative:hover img {
+            filter: brightness(0.9);
         }
         .file-input-wrapper {
             position: relative;
@@ -389,8 +400,6 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                 <div class="config-debug">
                     <strong>Current Configuration:</strong><br>
                     Max Images Allowed: <?= $maxProductImages ?><br>
-                    Config File: <?= file_exists($_SERVER['DOCUMENT_ROOT'] . '/hanouty/config/global_settings.json') ? 'EXISTS' : 'MISSING' ?><br>
-                    Session Value: <?= $_SESSION['global_max_images'] ?? 'Not Set' ?>
                 </div>
                 
                 <?php if (isset($addProductSuccess)): ?>
@@ -406,12 +415,6 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                         <i class="bi-exclamation-triangle me-2"></i>
                         <?= htmlspecialchars($addProductError) ?>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    <div class="alert alert-info">
-                        <strong>Validation Debug Info:</strong><br>
-                        Max Images Allowed: <?= $maxProductImages ?><br>
-                        Images selected: <?= ($uploadedCount ?? 0) + ($existingCount ?? 0) ?><br>
-                        Uploaded: <?= $uploadedCount ?? 0 ?>, Existing: <?= $existingCount ?? 0 ?>
                     </div>
                 <?php endif; ?>
                 
@@ -449,11 +452,11 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="price" class="form-label">
-                                            <i class="bi-currency-dollar me-1"></i>
+                                            <i class="bi-cash me-1"></i>
                                             Price *
                                         </label>
                                         <div class="input-group">
-                                            <span class="input-group-text">$</span>
+                                            <span class="input-group-text">DT</span>
                                             <input class="form-control <?= isset($errors['price']) ? 'form-error' : '' ?>" id="price" name="price" placeholder="0.00" value="<?= htmlspecialchars($_POST['price'] ?? '') ?>">
                                         </div>
                                         <?php if (isset($errors['price'])): ?>
@@ -492,8 +495,7 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                             <div class="mb-3">
                                 <label class="form-label">
                                     <i class="bi-images me-1"></i>
-                                    Product Images *
-                                    <span class="text-danger fw-bold">(MAXIMUM <?= $maxProductImages ?> IMAGES)</span>
+                                    Product Images 
                                 </label>
                                 <div id="image-limit-warning" class="mt-1" style="display:none;"></div>
                                 <div class="file-input-wrapper">
@@ -536,11 +538,6 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                             <i class="bi-plus-circle me-2"></i>
                             Add Product
                         </button>
-                        <div class="mt-2">
-                            <small class="text-muted" id="image-count-display">
-                                Selected: 0 of <?= $maxProductImages ?> images
-                            </small>
-                        </div>
                     </div>
                 </form>
             </div>
@@ -609,22 +606,52 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
         const maxFiles = typeof window.maxProductImages !== 'undefined' ? window.maxProductImages : 5;
         
         let filesArray = input.files ? Array.from(input.files) : [];
+        const dataTransfer = new DataTransfer();
 
         // Show previews for all selected images (not limited to maxFiles for preview)
         filesArray.forEach((file, index) => {
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'position-relative d-inline-block me-2 mb-2';
+                    
                     const img = document.createElement('img');
                     img.src = e.target.result;
                     img.alt = `Preview ${index + 1}`;
                     if (index >= maxFiles) {
-                        img.style.border = '2px solid #dc3545'; // Red border for excess images
+                        img.style.border = '2px solid #dc3545';
                         img.title = 'This image exceeds the limit and will not be processed';
                     }
-                    preview.appendChild(img);
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.type = 'button';
+                    deleteBtn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 rounded-circle';
+                    deleteBtn.style.width = '24px';
+                    deleteBtn.style.height = '24px';
+                    deleteBtn.style.padding = '0';
+                    deleteBtn.style.transform = 'translate(50%, -50%)';
+                    deleteBtn.innerHTML = '×';
+                    
+                    deleteBtn.onclick = function() {
+                        const newDataTransfer = new DataTransfer();
+                        const fileInput = document.getElementById('images');
+                        
+                        Array.from(fileInput.files).forEach((f, i) => {
+                            if (i !== index) newDataTransfer.items.add(f);
+                        });
+                        
+                        fileInput.files = newDataTransfer.files;
+                        wrapper.remove();
+                        updateImageSelectionLimit();
+                    };
+                    
+                    wrapper.appendChild(img);
+                    wrapper.appendChild(deleteBtn);
+                    preview.appendChild(wrapper);
                 };
                 reader.readAsDataURL(file);
+                dataTransfer.items.add(file);
             }
         });
 
