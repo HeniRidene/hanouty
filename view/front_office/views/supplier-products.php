@@ -14,73 +14,6 @@ if (session_status() === PHP_SESSION_NONE) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" rel="stylesheet" />
 </head>
 <body>
-    <!-- Navigation-->
-    <nav class="navbar navbar-expand-lg navbar-light" style="background: linear-gradient(135deg, #198754 0%, #20c997 100%); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-        <div class="container px-4 px-lg-5">
-            <a class="navbar-brand text-white" href="/hanouty/view/front_office/router.php"><strong>Hanouty</strong></a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link text-white" aria-current="page" href="/hanouty/view/front_office/router.php">Home</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=common-products">Common Products</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=flash-sale">Flash Sale</a></li>
-                    <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=about-us">About Us</a></li>
-                    <?php if (isset($_SESSION['user_id'])): ?>
-                        <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=profile">Profile</a></li>
-                    <?php endif; ?>
-                </ul>
-
-                <div class="d-flex align-items-center gap-3">
-                    <!-- Search Form -->
-                    <form class="d-flex me-2" method="GET" action="/hanouty/view/front_office/router.php">
-                        <div class="input-group" style="min-width: 300px;">
-                            <input class="form-control border-end-0" type="search" name="search" placeholder="Search products..." value="<?= isset($searchTerm) ? htmlspecialchars($searchTerm) : '' ?>">
-                            <button class="btn btn-outline-light" type="submit" style="border-left: none;">
-                                <i class="bi bi-search"></i>
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Cart and User Menu -->
-                    <div class="d-flex align-items-center">
-                        <a href="router.php?action=cart" class="btn btn-outline-light position-relative me-2">
-                            <i class="bi bi-cart"></i>
-                            <?php if (isset($_SESSION['cart']) && array_sum($_SESSION['cart']) > 0): ?>
-                                <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    <?= array_sum($_SESSION['cart']) ?>
-                                </span>
-                            <?php endif; ?>
-                        </a>
-
-                        <?php if (isset($_SESSION['user_id'])): ?>
-                            <div class="dropdown">
-                                <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi-person-fill me-1"></i>
-                                    <?= htmlspecialchars($_SESSION['user_name']) ?>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                    <li><a class="dropdown-item" href="router.php?action=profile">Profile</a></li>
-                                    <?php if ($_SESSION['user_role'] === 'supplier'): ?>
-                                        <li><a class="dropdown-item" href="../back_office/index.php">Dashboard</a></li>
-                                    <?php endif; ?>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" href="router.php?action=logout">Logout</a></li>
-                                </ul>
-                            </div>
-                        <?php else: ?>
-                            <button class="btn btn-outline-light" type="button" onclick="showLoginModal()">
-                                <i class="bi-person-fill me-1"></i>
-                                Login
-                            </button>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
-
     <div class="container py-5">
         <a href="router.php" class="btn btn-outline-dark mb-4">&larr; Back to Home</a>
         <div class="mb-4">
@@ -141,47 +74,6 @@ if (session_status() === PHP_SESSION_NONE) {
             <div class="alert alert-info">This supplier has no products yet.</div>
         <?php endif; ?>
     </div>
-
-    <!-- Footer-->
-    <footer class="py-5 bg-dark">
-        <div class="container">
-            <p class="m-0 text-center text-white">Copyright &copy; Hanouty <?= date('Y') ?></p>
-        </div>
-    </footer>
-
-    <!-- Bootstrap core JS-->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Modal for Login -->
-    <div class="modal fade" id="loginModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Login to Hanouty</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="loginForm" method="POST" action="router.php?action=login">
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email address</label>
-                            <input type="email" class="form-control" id="email" name="email" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
-                        </div>
-                        <button type="submit" class="btn btn-success w-100">Login</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function showLoginModal() {
-            var loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
-            loginModal.show();
-        }
-    </script>
 </body>
 </html> 

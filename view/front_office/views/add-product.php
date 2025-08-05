@@ -265,17 +265,6 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
             object-fit: cover;
             border-radius: 0.5rem;
             border: 2px solid #dee2e6;
-            transition: all 0.2s ease-in-out;
-        }
-        .image-preview .btn-danger {
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
-        }
-        .image-preview .position-relative:hover .btn-danger {
-            opacity: 1;
-        }
-        .image-preview .position-relative:hover img {
-            filter: brightness(0.9);
         }
         .file-input-wrapper {
             position: relative;
@@ -415,6 +404,12 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                         <i class="bi-exclamation-triangle me-2"></i>
                         <?= htmlspecialchars($addProductError) ?>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>Validation Debug Info:</strong><br>
+                        Max Images Allowed: <?= $maxProductImages ?><br>
+                        Images selected: <?= ($uploadedCount ?? 0) + ($existingCount ?? 0) ?><br>
+                        Uploaded: <?= $uploadedCount ?? 0 ?>, Existing: <?= $existingCount ?? 0 ?>
                     </div>
                 <?php endif; ?>
                 
@@ -606,52 +601,22 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
         const maxFiles = typeof window.maxProductImages !== 'undefined' ? window.maxProductImages : 5;
         
         let filesArray = input.files ? Array.from(input.files) : [];
-        const dataTransfer = new DataTransfer();
 
         // Show previews for all selected images (not limited to maxFiles for preview)
         filesArray.forEach((file, index) => {
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'position-relative d-inline-block me-2 mb-2';
-                    
                     const img = document.createElement('img');
                     img.src = e.target.result;
                     img.alt = `Preview ${index + 1}`;
                     if (index >= maxFiles) {
-                        img.style.border = '2px solid #dc3545';
+                        img.style.border = '2px solid #dc3545'; // Red border for excess images
                         img.title = 'This image exceeds the limit and will not be processed';
                     }
-                    
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.type = 'button';
-                    deleteBtn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 rounded-circle';
-                    deleteBtn.style.width = '24px';
-                    deleteBtn.style.height = '24px';
-                    deleteBtn.style.padding = '0';
-                    deleteBtn.style.transform = 'translate(50%, -50%)';
-                    deleteBtn.innerHTML = '×';
-                    
-                    deleteBtn.onclick = function() {
-                        const newDataTransfer = new DataTransfer();
-                        const fileInput = document.getElementById('images');
-                        
-                        Array.from(fileInput.files).forEach((f, i) => {
-                            if (i !== index) newDataTransfer.items.add(f);
-                        });
-                        
-                        fileInput.files = newDataTransfer.files;
-                        wrapper.remove();
-                        updateImageSelectionLimit();
-                    };
-                    
-                    wrapper.appendChild(img);
-                    wrapper.appendChild(deleteBtn);
-                    preview.appendChild(wrapper);
+                    preview.appendChild(img);
                 };
                 reader.readAsDataURL(file);
-                dataTransfer.items.add(file);
             }
         });
 
