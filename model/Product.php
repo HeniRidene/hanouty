@@ -8,20 +8,47 @@ class Product {
         $this->pdo = config::getConnexion();
     }
 
-    // Get all active products with supplier information
-    public function getAllActiveProducts() {
+    // Get all active products with supplier information and pagination
+    public function getAllActiveProducts($page = 1, $perPage = 10) {
         try {
+            // First get total count for pagination
+            $countSql = "SELECT COUNT(*) as total FROM products p WHERE p.status = 'active'";
+            $countStmt = $this->pdo->prepare($countSql);
+            $countStmt->execute();
+            $totalCount = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+            
+            // Calculate total pages
+            $totalPages = ceil($totalCount / $perPage);
+            $offset = ($page - 1) * $perPage;
+            
+            // Get paginated results
             $sql = "SELECT p.*, u.name as supplier_name, s.business_name, s.profile_image 
                     FROM products p 
                     JOIN users u ON p.user_id = u.id 
                     LEFT JOIN supplier s ON u.id = s.user_id 
                     WHERE p.status = 'active' 
-                    ORDER BY p.created_at DESC";
+                    ORDER BY p.created_at DESC
+                    LIMIT :limit OFFSET :offset";
+            
             $stmt = $this->pdo->prepare($sql);
+            $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
             $stmt->execute();
-            return $stmt->fetchAll();
+            
+            return [
+                'products' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'pages' => $totalPages,
+                'currentPage' => $page,
+                'total' => $totalCount
+            ];
         } catch (PDOException $e) {
             throw new Exception("Error getting products: " . $e->getMessage());
+            return [
+                'products' => [],
+                'pages' => 0,
+                'currentPage' => 1,
+                'total' => 0
+            ];
         }
     }
 

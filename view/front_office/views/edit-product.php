@@ -102,7 +102,6 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
             <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-4">
                 <li class="nav-item"><a class="nav-link text-white" aria-current="page" href="/hanouty/view/front_office/router.php">Home</a></li>
                 <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=common-products">Common Products</a></li>
-                <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=flash-sale">Flash Sale</a></li>
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <li class="nav-item"><a class="nav-link text-white" href="/hanouty/view/front_office/router.php?action=profile">Profile</a></li>
                 <?php endif; ?>
@@ -213,10 +212,6 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
                                             <option value="Health & Beauty" <?= (($_POST['category'] ?? $product['category']) === 'Health & Beauty') ? 'selected' : '' ?>>Health & Beauty</option>
                                             <option value="Other" <?= (($_POST['category'] ?? $product['category']) === 'Other') ? 'selected' : '' ?>>Other</option>
                                         </select>
-                                    </div>
-                                    <div class="mb-3 form-check">
-                                        <input type="checkbox" class="form-check-input" id="is_flash_sale" name="is_flash_sale" value="1" <?= (isset($_POST['is_flash_sale']) || ($product['is_flash_sale'] ?? 0) == 1) ? 'checked' : '' ?>>
-                                        <label class="form-check-label" for="is_flash_sale">Add to Flash Sale</label>
                                     </div>
                                 </div>
                             </div>

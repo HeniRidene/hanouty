@@ -78,7 +78,28 @@ if (file_exists($configFile)) {
     $globalMaxImages = intval($_SESSION['global_max_images']);
 }
 
-$products = $productModel->getAllActiveProducts();
+// Get current page from query string
+$currentPage = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+$perPage = 7; // Number of products per page
+
+// Get paginated products
+try {
+    $result = $productModel->getAllActiveProducts($currentPage, $perPage);
+    $products = $result['products'] ?? [];
+    $totalPages = $result['pages'] ?? 1;
+    
+    // If no products found or error occurred, set defaults
+    if (empty($products)) {
+        $products = [];
+        $totalPages = 1;
+    }
+} catch (Exception $e) {
+    // Log the error and set default values
+    error_log("Error fetching products: " . $e->getMessage());
+    $products = [];
+    $totalPages = 1;
+}
+
 $currentUser = $authController->getCurrentUser();
 
 require_once '../components/Sidebar.php';
@@ -165,35 +186,6 @@ $sidebar = new Sidebar();
         </div>
       <?php endif; ?>
 
-      <!-- Global Max Images Setting -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <h6 class="card-title fw-semibold mb-3">
-            <i class="ti ti-settings me-2"></i>
-            Global Maximum Images Setting
-          </h6>
-          <form method="POST" action="products.php" class="d-flex align-items-center flex-wrap" style="gap: 1em;">
-            <input type="hidden" name="set_global_max_images" value="1">
-            <div class="d-flex align-items-center" style="gap: 0.5em;">
-              <label for="global_max_images" class="mb-0 fw-medium">Default Max Images for All New Products:</label>
-              <input type="number" id="global_max_images" name="global_max_images" min="1" max="20" value="<?= $globalMaxImages ?>" style="width: 80px;" class="form-control form-control-sm">
-              <button type="submit" class="btn btn-sm btn-primary">
-                <i class="ti ti-device-floppy me-1"></i>
-                Save
-              </button>
-            </div>
-          </form>
-          
-          <div class="config-info mt-3">
-            <small class="text-muted">
-              <strong>Current Setting:</strong> Maximum <?= $globalMaxImages ?> images per product<br>
-              <strong>Config File:</strong> <?= file_exists($configFile) ? 'Found' : 'Not Found' ?><br>
-              <strong>Session Value:</strong> <?= $_SESSION['global_max_images'] ?? 'Not Set' ?><br>
-              <em>This setting applies to all new products. Existing products can have individual limits set below.</em>
-            </small>
-          </div>
-        </div>
-      </div>
 
       <!-- Products List -->
       <div class="card">
@@ -216,6 +208,14 @@ $sidebar = new Sidebar();
                 </tr>
               </thead>
               <tbody>
+                <?php if (empty($products)): ?>
+                <tr>
+                  <td colspan="7" class="text-center py-4">
+                    <i class="ti ti-mood-empty fs-4 mb-2 d-block"></i>
+                    No products found
+                  </td>
+                </tr>
+                <?php else: ?>
                 <?php foreach ($products as $product): ?>
                 <tr>
                   <td>
@@ -259,8 +259,66 @@ $sidebar = new Sidebar();
                   </td>
                 </tr>
                 <?php endforeach; ?>
+                <?php endif; ?>
               </tbody>
             </table>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-center mt-4">
+              <nav aria-label="Product navigation">
+                <ul class="pagination">
+                  <?php if ($currentPage > 1): ?>
+                    <li class="page-item">
+                      <a class="page-link" href="?page=<?= $currentPage - 1 ?>" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                      </a>
+                    </li>
+                  <?php endif; ?>
+                  
+                  <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                    <li class="page-item <?= $i === $currentPage ? 'active' : '' ?>">
+                      <a class="page-link" href="?page=<?= $i ?>"><?= $i ?></a>
+                    </li>
+                  <?php endfor; ?>
+                  
+                  <?php if ($currentPage < $totalPages): ?>
+                    <li class="page-item">
+                      <a class="page-link" href="?page=<?= $currentPage + 1 ?>" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                      </a>
+                    </li>
+                  <?php endif; ?>
+                </ul>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Global Max Images Setting -->
+      <div class="card mt-4">
+        <div class="card-body">
+          <h6 class="card-title fw-semibold mb-3">
+            <i class="ti ti-settings me-2"></i>
+            Global Maximum Images Setting
+          </h6>
+          <form method="POST" action="products.php" class="d-flex align-items-center flex-wrap" style="gap: 1em;">
+            <input type="hidden" name="set_global_max_images" value="1">
+            <div class="d-flex align-items-center" style="gap: 0.5em;">
+              <label for="global_max_images" class="mb-0 fw-medium">Default Max Images for All New Products:</label>
+              <input type="number" id="global_max_images" name="global_max_images" min="1" max="20" value="<?= $globalMaxImages ?>" style="width: 80px;" class="form-control form-control-sm">
+              <button type="submit" class="btn btn-sm btn-primary">
+                <i class="ti ti-device-floppy me-1"></i>
+                Save
+              </button>
+            </div>
+          </form>
+          
+          <div class="config-info mt-3">
+            <small class="text-muted">
+              <strong>Current Setting:</strong> Maximum <?= $globalMaxImages ?> images per product<br>
+              <em>This setting applies to all new products. Existing products can have individual limits set above.</em>
+            </small>
           </div>
         </div>
       </div>

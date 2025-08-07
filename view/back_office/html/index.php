@@ -22,15 +22,24 @@ $roleCounts = [
 ];
 $recentUsers = array_slice($users, 0, 5);
 
-$products = $productModel->getAllActiveProducts();
+// Get all products for statistics (no pagination)
+$result = $productModel->getAllActiveProducts(1, PHP_INT_MAX);
+$products = $result['products'] ?? [];
 $productCount = count($products);
+
+// Initialize category counts
 $categoryCounts = [];
 foreach ($products as $p) {
-    $cat = $p['category'] ?: 'Uncategorized';
-    if (!isset($categoryCounts[$cat])) $categoryCounts[$cat] = 0;
+    $cat = isset($p['category']) && $p['category'] ? $p['category'] : 'Uncategorized';
+    if (!isset($categoryCounts[$cat])) {
+        $categoryCounts[$cat] = 0;
+    }
     $categoryCounts[$cat]++;
 }
-$recentProducts = array_slice($products, 0, 5);
+
+// Get only recent products with pagination
+$recentResult = $productModel->getAllActiveProducts(1, 5);
+$recentProducts = $recentResult['products'] ?? [];
 $totalSales = 0; // Placeholder, replace with real sales data if available
 $currentUser = $authController->getCurrentUser();
 ?>
@@ -146,18 +155,25 @@ echo $sidebar->render();
           <div class="card-header bg-transparent"><strong>Recent Products</strong></div>
           <div class="card-body p-0">
             <ul class="list-group list-group-flush">
-              <?php foreach ($recentProducts as $p): ?>
+              <?php if (empty($recentProducts)): ?>
+                <li class="list-group-item text-center py-4">
+                  <i class="ti ti-mood-empty fs-4 mb-2 d-block"></i>
+                  No products found
+                </li>
+              <?php else: ?>
+                <?php foreach ($recentProducts as $p): ?>
                 <li class="list-group-item d-flex align-items-center">
                   <span class="badge bg-info me-2" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:1.1rem;">
                     <i class="ti ti-package"></i>
                   </span>
                   <div>
-                    <div class="fw-semibold"><?= htmlspecialchars($p['title']) ?></div>
-                    <div class="text-muted small">Category: <?= htmlspecialchars($p['category'] ?: 'Uncategorized') ?></div>
+                    <div class="fw-semibold"><?= htmlspecialchars($p['title'] ?? 'Untitled Product') ?></div>
+                    <div class="text-muted small">Category: <?= htmlspecialchars(isset($p['category']) && $p['category'] ? $p['category'] : 'Uncategorized') ?></div>
                   </div>
-                  <span class="ms-auto text-muted small"><?= date('Y-m-d', strtotime($p['created_at'])) ?></span>
+                  <span class="ms-auto text-muted small"><?= isset($p['created_at']) ? date('Y-m-d', strtotime($p['created_at'])) : 'N/A' ?></span>
                 </li>
-              <?php endforeach; ?>
+                <?php endforeach; ?>
+              <?php endif; ?>
             </ul>
           </div>
         </div>
