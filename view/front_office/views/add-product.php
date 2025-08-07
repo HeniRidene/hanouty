@@ -396,12 +396,6 @@ if (isset($_SESSION['user_id']) && $_SESSION['user_role'] === 'supplier') {
             </div>
             
             <div class="form-body">
-                <!-- Debug Info -->
-                <div class="config-debug">
-                    <strong>Current Configuration:</strong><br>
-                    Max Images Allowed: <?= $maxProductImages ?><br>
-                </div>
-                
                 <?php if (isset($addProductSuccess)): ?>
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                         <i class="bi-check-circle me-2"></i>
